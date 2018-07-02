@@ -37,11 +37,16 @@ import * as monaco from 'monaco-editor';
 
 import '../style/index.css';
 
-import * as monacoCSS from 'file-loader!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-css.worker.bundle.js';
-import * as monacoEditor from 'file-loader!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-editor.worker.bundle.js';
-import * as monacoHTML from 'file-loader!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-html.worker.bundle.js';
-import * as monacoJSON from 'file-loader!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-json.worker.bundle.js';
-import * as monacoTS from 'file-loader!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-ts.worker.bundle.js';
+// @ts-ignore: error TS2307: Cannot find module
+import * as monacoCSS from 'file-loader?name=[path][name].[ext]!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-css.worker.bundle.js';
+// @ts-ignore: error TS2307: Cannot find module
+import * as monacoEditor from 'file-loader?name=[path][name].[ext]!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-editor.worker.bundle.js';
+// @ts-ignore: error TS2307: Cannot find module
+import * as monacoHTML from 'file-loader?name=[path][name].[ext]!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-html.worker.bundle.js';
+// @ts-ignore: error TS2307: Cannot find module
+import * as monacoJSON from 'file-loader?name=[path][name].[ext]!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-json.worker.bundle.js';
+// @ts-ignore: error TS2307: Cannot find module
+import * as monacoTS from 'file-loader?name=[path][name].[ext]!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-ts.worker.bundle.js';
 
 let URLS: { [key: string]: string } = {
   css: monacoCSS,
@@ -88,7 +93,6 @@ export class MonacoWidget extends Widget implements DocumentRegistry.IReadyWidge
     monacoModel.onDidChangeContent((event) => {
       this.context.model.value.text = this.editor.getValue();
     });
-
     context.ready.then(() => { this._onContextReady(); });
   }
 
@@ -187,7 +191,7 @@ const extension: JupyterLabPlugin<void> = {
       execute: () => {
         let widget = new Widget();
         widget.node.innerHTML = 'Creating new files coming...';
-        //let widget = new MonacoWidget();
+        // let widget = new MonacoWidget();
         app.shell.addToMainArea(widget);
 
         // Activate the widget
