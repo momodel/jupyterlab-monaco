@@ -2,3 +2,19 @@
 | Copyright (c) Jupyter Development Team.
 | Distributed under the terms of the Modified BSD License.
 |---------------------------------------------------------*/
+.jp-Monaco {
+    height: 100%;
+    flex: 1 1 auto;
+    padding: var(--jp-notebook-padding);
+    outline: none;
+    overflow: auto;
+    background: var(--jp-layout-color0);
+}
+
+.jp-MonacoPanel-toolbar {
+    padding: 10px 2px;
+    height: 42px;
+    box-shadow: var(--jp-toolbar-box-shadow);
+    background: var(--jp-toolbar-background);
+    z-index: 1;
+}
