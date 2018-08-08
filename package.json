@@ -30,11 +30,6 @@
     "watch": "tsc -w"
   },
   "dependencies": {
-    "@jupyterlab/application": "^0.15.1",
-    "@jupyterlab/apputils": "^0.15.1",
-    "@jupyterlab/coreutils": "^1.0.3",
-    "@jupyterlab/fileeditor": "^0.15.1",
-    "monaco-editor": "^0.13.1"
   },
   "devDependencies": {
     "rimraf": "^2.6.1",
