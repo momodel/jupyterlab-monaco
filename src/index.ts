@@ -10,6 +10,7 @@
  */
 
 import {
+  ILayoutRestorer,
   JupyterLab, JupyterLabPlugin,
 } from '@jupyterlab/application';
 
@@ -22,27 +23,25 @@ import {
 } from '@jupyterlab/coreutils';
 
 import {
-  IEditorTracker,
-} from '@jupyterlab/fileeditor';
-
-import {
   Toolbar,
   ToolbarButton,
+  InstanceTracker,
 } from '@jupyterlab/apputils';
 //
 // import {
 //   IMainMenu,
 // } from '@jupyterlab/mainmenu';
 
-// import {
-//   CodeConsole,
-// } from '@jupyterlab/console';
+import {
+  IConsoleTracker,
+} from '@jupyterlab/console';
 
 import {
   PromiseDelegate,
 } from '@phosphor/coreutils';
 
 import {
+  DockLayout,
   PanelLayout,
   Widget,
 } from '@phosphor/widgets';
@@ -94,103 +93,6 @@ let URLS: { [key: string]: string } = {
     return url;
   },
 };
-
-/**
- * Create a toExecutable toolbar item.
- */
-export function createRunButton(app: JupyterLab, context: DocumentRegistry.CodeContext): ToolbarButton {
-
-  return new ToolbarButton({
-    className: TOOLBAR_RUN_CLASS,
-    onClick: () => {
-      const { commands } = app;
-      const options = {
-        path: context.path,
-        preferredLanguage: context.model.defaultKernelLanguage,
-        kernelPreference: { name: 'python3' },
-      };
-      commands.execute('console:create', options)
-        .then((consolePanel) => {
-          const {console: currentConsole} = consolePanel;
-          let promptCell = currentConsole.promptCell;
-          if (!promptCell) {
-            return;
-          }
-          let model = promptCell.model;
-          model.value.text = `!python ${context.contentsModel.name}`;
-          currentConsole.execute(true);
-        });
-    },
-    tooltip: 'Run Script',
-  });
-}
-
-/**
- * A document widget for editors.
- */
-export class MonacoFileEditor extends Widget implements DocumentRegistry.IReadyWidget {
-  /**
-   * Construct a new editor widget.
-   */
-  constructor(app: JupyterLab, context: DocumentRegistry.CodeContext) {
-    super();
-    this.addClass('jp-MonacoFileEditor');
-    this.id = uuid();
-    this.title.label = PathExt.basename(context.localPath);
-    this.title.closable = true;
-    // this._mimeTypeService = options.mimeTypeService;
-
-    let editorWidget = this.editorWidget = new MonacoWidget(context);
-    this.editor = editorWidget.editor;
-    this.model = editorWidget.model;
-    editorWidget.addClass('jp-Monaco');
-
-    // context.pathChanged.connect(this._onPathChanged, this);
-    // this._onPathChanged();
-
-    let layout = this.layout = new PanelLayout();
-    let toolbar = new Toolbar();
-    toolbar.addClass('jp-MonacoPanel-toolbar');
-    toolbar.addItem('run', createRunButton(app, context));
-    layout.addWidget(toolbar);
-    layout.addWidget(editorWidget);
-  }
-
-  /**
-   * Get the context for the editor widget.
-   */
-  get context(): DocumentRegistry.Context {
-    return this.editorWidget.context;
-  }
-
-  /**
-   * A promise that resolves when the file editor is ready.
-   */
-  get ready(): Promise<void> {
-    return this.editorWidget.ready;
-  }
-
-  /**
-   * Handle `'activate-request'` messages.
-   */
-  protected onActivateRequest(msg: Message): void {
-    this.editor.focus();
-  }
-
-  onResize() {
-    this.editor.layout();
-  }
-
-  onAfterShow() {
-    this.editor.layout();
-  }
-
-  private editorWidget: MonacoWidget;
-  public model: monaco.editor.IModel;
-  public editor: monaco.editor.IStandaloneCodeEditor;
-  protected _context: DocumentRegistry.Context;
-  // private _mimeTypeService: IEditorMimeTypeService;
-}
 
 /**
  * An monaco widget.
@@ -282,28 +184,11 @@ export class MonacoWidget extends Widget {
 import {
   ABCWidgetFactory, DocumentRegistry,
 } from '@jupyterlab/docregistry';
-
-/**
- * A widget factory for editors.
- */
-export class MonacoEditorFactory extends ABCWidgetFactory<MonacoFileEditor, DocumentRegistry.ICodeModel> {
-  /**
-   * Construct a new editor widget factory.
-   */
-  constructor(options: MonacoEditorFactory.IOptions) {
-    super(options.factoryOptions);
-    this._app = options.app;
-  }
-
-  /**
-   * Create a new widget given a context.
-   */
-  protected createNewWidget(context: DocumentRegistry.CodeContext): MonacoFileEditor {
-    return new MonacoFileEditor(this._app, context);
-  }
-
-  _app: JupyterLab;
-}
+import { ConsolePanel } from '@jupyterlab/console';
+import { IEditorServices } from '@jupyterlab/codeeditor';
+import { IFileBrowserFactory } from '@jupyterlab/filebrowser';
+import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
+// import { find } from '@phosphor/algorithm';
 
 /**
  * The namespace for `MonacoEditorFactory` class statics.
@@ -316,7 +201,6 @@ export namespace MonacoEditorFactory {
     /**
      * The editor services used by the factory.
      */
-    app: JupyterLab;
 
     /**
      * The factory options associated with the factory.
@@ -335,15 +219,223 @@ export namespace MonacoEditorFactory {
 const extension: JupyterLabPlugin<void> = {
   id: 'jupyterlab-monaco',
   autoStart: true,
-  requires: [ICommandPalette, IEditorTracker],
-  activate: (app: JupyterLab, palette: ICommandPalette, editorTracker: IEditorTracker) => {
+  requires: [
+    ICommandPalette,
+    ConsolePanel.IContentFactory,
+    IEditorServices,
+    ILayoutRestorer,
+    IFileBrowserFactory,
+    IRenderMimeRegistry,
+    IConsoleTracker,
+  ],
+  activate: (app: JupyterLab, palette: ICommandPalette, contentFactory: ConsolePanel.IContentFactory,
+             editorServices: IEditorServices, restorer: ILayoutRestorer, browserFactory: IFileBrowserFactory,
+             rendermime: IRenderMimeRegistry, tracker: IConsoleTracker) => {
     // const manager = app.serviceManager;
     // const { commands } = app;
     // const tracker = new InstanceTracker<ConsolePanel>({ namespace: 'console' });
 
+    function openConsole(args: Partial<ConsolePanel.IOptions>) {
+      const manager = app.serviceManager;
+      const { shell } = app;
+
+      // Create an instance tracker for all console panels.
+      // const tracker = new InstanceTracker<ConsolePanel>({ namespace: 'console' });
+
+      interface ICreateOptions extends Partial<ConsolePanel.IOptions> {
+        ref?: string;
+        insertMode?: DockLayout.InsertMode;
+      }
+
+      /**
+       * Create a console for a given path.
+       */
+      function createConsole(options: ICreateOptions): Promise<ConsolePanel> {
+
+        let panel: ConsolePanel;
+        return manager.ready.then(() => {
+          panel = new ConsolePanel({
+            manager,
+            contentFactory,
+            mimeTypeService: editorServices.mimeTypeService,
+            rendermime,
+            ...options as Partial<ConsolePanel.IOptions>,
+          });
+
+          return panel.session.ready;
+        }).then(() => {
+          // Add the console panel to the tracker.
+          (tracker as InstanceTracker<ConsolePanel>).add(panel);
+          shell.addToMainArea(
+            panel, {
+              ref: options.ref || null, mode: options.insertMode || 'split-bottom',
+            },
+          );
+          shell.activateById(panel.id);
+          return panel;
+        });
+      }
+
+      // let path = args['path'];
+      // let pathWidget = (tracker as InstanceTracker<ConsolePanel>).find(value => {
+      //   return value.console.session.path === path;
+      // });
+      // let bottomWidget = (tracker as InstanceTracker<ConsolePanel>).find(value => {
+      //   console.log('value', value);
+      //   return value.node.offsetTop > 30;
+      // });
+      // if (bottomWidget) {
+      //   console.log('bottomWidget', bottomWidget);
+      //   console.log('currentWidget1', shell.currentWidget);
+      //   // shell.activateById(bottomWidget.id);
+      //   bottomWidget.node.click();
+      //   bottomWidget.node.focus();
+      //   console.log('currentWidget2', shell.currentWidget);
+      //   args['insertMode'] = 'tab-after';
+      // }
+      // console.log('widget', pathWidget);
+      // if (pathWidget && pathWidget.node.offsetTop > 30) {
+      //   shell.activateById(pathWidget.id);
+      //   return Promise.resolve(pathWidget);
+      // } else {
+      //   return manager.ready.then(() => {
+      //     return createConsole(args);
+      //   });
+      // }
+      let bottomWidget = (tracker as InstanceTracker<ConsolePanel>).find(value => {
+        return value.node.offsetTop > 30;
+      });
+      if (bottomWidget) {
+        shell.activateById(bottomWidget.id);
+        return Promise.resolve(bottomWidget);
+      } else {
+        return manager.ready.then(() => {
+          return createConsole(args);
+        });
+      }
+    }
+
+    /**
+     * Create a toExecutable toolbar item.
+     */
+    function createRunButton(context: DocumentRegistry.CodeContext): ToolbarButton {
+
+      return new ToolbarButton({
+        className: TOOLBAR_RUN_CLASS,
+        onClick: () => {
+          // const { commands } = app;
+          const options = {
+            name: `Run: Python`,
+            path: context.path,
+            preferredLanguage: context.model.defaultKernelLanguage,
+            kernelPreference: { name: 'python3' },
+            insertMode: 'split-bottom',
+          };
+
+          openConsole(options)
+            .then((consolePanel) => {
+              const { console: currentConsole } = consolePanel;
+              let promptCell = currentConsole.promptCell;
+              if (!promptCell) {
+                return;
+              }
+              let model = promptCell.model;
+              model.value.text = `!python ${context.contentsModel.name}`;
+              currentConsole.execute(true);
+            });
+        },
+        tooltip: 'Run Script',
+      });
+    }
+
+    /**
+     * A document widget for editors.
+     */
+    class MonacoFileEditor extends Widget implements DocumentRegistry.IReadyWidget {
+      /**
+       * Construct a new editor widget.
+       */
+      constructor(context: DocumentRegistry.CodeContext) {
+        super();
+        this.addClass('jp-MonacoFileEditor');
+        this.id = uuid();
+        this.title.label = PathExt.basename(context.localPath);
+        this.title.closable = true;
+        // this._mimeTypeService = options.mimeTypeService;
+
+        let editorWidget = this.editorWidget = new MonacoWidget(context);
+        this.editor = editorWidget.editor;
+        this.model = editorWidget.model;
+        editorWidget.addClass('jp-Monaco');
+
+        // context.pathChanged.connect(this._onPathChanged, this);
+        // this._onPathChanged();
+
+        let layout = this.layout = new PanelLayout();
+        let toolbar = new Toolbar();
+        toolbar.addClass('jp-MonacoPanel-toolbar');
+        toolbar.addItem('run', createRunButton(context));
+        layout.addWidget(toolbar);
+        layout.addWidget(editorWidget);
+      }
+
+      /**
+       * Get the context for the editor widget.
+       */
+      get context(): DocumentRegistry.Context {
+        return this.editorWidget.context;
+      }
+
+      /**
+       * A promise that resolves when the file editor is ready.
+       */
+      get ready(): Promise<void> {
+        return this.editorWidget.ready;
+      }
+
+      /**
+       * Handle `'activate-request'` messages.
+       */
+      protected onActivateRequest(msg: Message): void {
+        this.editor.focus();
+      }
+
+      onResize() {
+        this.editor.layout();
+      }
+
+      onAfterShow() {
+        this.editor.layout();
+      }
+
+      private editorWidget: MonacoWidget;
+      public model: monaco.editor.IModel;
+      public editor: monaco.editor.IStandaloneCodeEditor;
+      protected _context: DocumentRegistry.Context;
+      // private _mimeTypeService: IEditorMimeTypeService;
+    }
+
+    /**
+     * A widget factory for editors.
+     */
+    class MonacoEditorFactory extends ABCWidgetFactory<MonacoFileEditor, DocumentRegistry.ICodeModel> {
+      /**
+       * Construct a new editor widget factory.
+       */
+      constructor(options: MonacoEditorFactory.IOptions) {
+        super(options.factoryOptions);
+      }
+
+      /**
+       * Create a new widget given a context.
+       */
+      protected createNewWidget(context: DocumentRegistry.CodeContext): MonacoFileEditor {
+        return new MonacoFileEditor(context);
+      }
+    }
+
     const factory = new MonacoEditorFactory(
       {
-        app,
         factoryOptions: {
           name: 'Monaco Editor',
           fileTypes: ['*'],
