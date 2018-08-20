@@ -152,13 +152,13 @@ export class MonacoWidget extends Widget {
 //       }
 //     });
 
-// install Monaco language client services
+    // install Monaco language client services
     const services = createMonacoServices(this.editor as any);
 
-// create the web socket
+    // create the web socket
     const url = createUrl('/sampleServer');
     const webSocket = createWebSocket(url);
-// listen when the web socket is opened
+    // listen when the web socket is opened
     listen({
       webSocket,
       onConnection: connection => {
