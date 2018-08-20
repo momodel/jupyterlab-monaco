@@ -56,6 +56,14 @@ import {
 
 import * as monaco from 'monaco-editor';
 
+import {listen, MessageConnection} from 'vscode-ws-jsonrpc';
+import {
+  BaseLanguageClient, CloseAction, ErrorAction,
+  createMonacoServices, createConnection
+} from 'monaco-languageclient';
+import normalizeUrl = require('normalize-url');
+import ReconnectingWebSocket = require('reconnecting-websocket');
+
 import '../style/index.css';
 
 import * as monacoCSS
@@ -94,6 +102,14 @@ let URLS: { [key: string]: string } = {
   },
 };
 
+// register Monaco languages
+monaco.languages.register({
+  id: 'python',
+  extensions: ['.py'],
+  aliases: ['python', 'Python', 'py'],
+  mimetypes: ['text/plain'],
+});
+
 /**
  * An monaco widget.
  */
@@ -122,6 +138,76 @@ export class MonacoWidget extends Widget {
       model: monacoModel,
     });
     this.model = monacoModel;
+
+//     // create Monaco editor
+//     const value = `{
+//     "$schema": "http://json.schemastore.org/coffeelint",
+//     "line_endings": "unix"
+// }`;
+//     const editor = monaco.editor.create(document.getElementById('container')!, {
+//       model: monaco.editor.createModel(value, 'json', monaco.Uri.parse('inmemory://model.json')),
+//       glyphMargin: true,
+//       lightbulb: {
+//         enabled: true
+//       }
+//     });
+
+// install Monaco language client services
+    const services = createMonacoServices(this.editor as any);
+
+// create the web socket
+    const url = createUrl('/sampleServer');
+    const webSocket = createWebSocket(url);
+// listen when the web socket is opened
+    listen({
+      webSocket,
+      onConnection: connection => {
+        // create and start the language client
+        const languageClient = createLanguageClient(connection);
+        const disposable = languageClient.start();
+        connection.onClose(() => disposable.dispose());
+      }
+    });
+
+    function createLanguageClient(connection: MessageConnection): BaseLanguageClient {
+      return new BaseLanguageClient({
+        name: 'Sample Language Client',
+        clientOptions: {
+          // use a language id as a document selector
+          documentSelector: ['python'],
+          // disable the default error handler
+          errorHandler: {
+            error: () => ErrorAction.Continue,
+            closed: () => CloseAction.DoNotRestart
+          }
+        },
+        services,
+        // create a language client connection from the JSON RPC connection on demand
+        connectionProvider: {
+          get: (errorHandler, closeHandler) => {
+            return Promise.resolve(createConnection(connection, errorHandler, closeHandler));
+          }
+        }
+      });
+    }
+
+    function createUrl(path: string): string {
+      const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+      return normalizeUrl(`${protocol}://localhost:3000${location.pathname}${path}`);
+    }
+
+    function createWebSocket(url: string): WebSocket {
+      const socketOptions = {
+        maxReconnectionDelay: 10000,
+        minReconnectionDelay: 1000,
+        reconnectionDelayGrowFactor: 1.3,
+        connectionTimeout: 10000,
+        maxRetries: Infinity,
+        debug: false
+      };
+      // @ts-ignore
+      return new ReconnectingWebSocket(url, undefined, socketOptions);
+    }
 
     monacoModel.onDidChangeContent((event) => {
       this.context.model.value.text = this.editor.getValue();
@@ -189,6 +275,7 @@ import { IEditorServices } from '@jupyterlab/codeeditor';
 import { IFileBrowserFactory } from '@jupyterlab/filebrowser';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 // import { find } from '@phosphor/algorithm';
+
 
 /**
  * The namespace for `MonacoEditorFactory` class statics.
