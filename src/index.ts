@@ -56,14 +56,14 @@ import {
 
 import * as monaco from 'monaco-editor';
 
-import {listen, MessageConnection} from 'vscode-ws-jsonrpc';
+import { listen, MessageConnection } from 'vscode-ws-jsonrpc';
 import {
   BaseLanguageClient, CloseAction, ErrorAction,
-  createMonacoServices, createConnection
+  createMonacoServices, createConnection,
 } from 'monaco-languageclient';
 import normalizeUrl = require('normalize-url');
 import ReconnectingWebSocket = require('reconnecting-websocket');
-
+import { webServer } from '../../../../../../config';
 import '../style/index.css';
 
 import * as monacoCSS
@@ -166,7 +166,7 @@ export class MonacoWidget extends Widget {
         const languageClient = createLanguageClient(connection);
         const disposable = languageClient.start();
         connection.onClose(() => disposable.dispose());
-      }
+      },
     });
 
     function createLanguageClient(connection: MessageConnection): BaseLanguageClient {
@@ -178,22 +178,24 @@ export class MonacoWidget extends Widget {
           // disable the default error handler
           errorHandler: {
             error: () => ErrorAction.Continue,
-            closed: () => CloseAction.DoNotRestart
-          }
+            closed: () => CloseAction.DoNotRestart,
+          },
         },
         services,
         // create a language client connection from the JSON RPC connection on demand
         connectionProvider: {
           get: (errorHandler, closeHandler) => {
             return Promise.resolve(createConnection(connection, errorHandler, closeHandler));
-          }
-        }
+          },
+        },
       });
     }
 
     function createUrl(path: string): string {
       const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-      return normalizeUrl(`${protocol}://localhost:3000${location.pathname}${path}`);
+      const userID = localStorage.getItem('user_ID');
+      const projectName = document.title.split(':')[0];
+      return normalizeUrl(`${protocol}://${webServer.replace('http://', '')}/hub_api/pyls/${userID}+${projectName}${path}`);
     }
 
     function createWebSocket(url: string): WebSocket {
@@ -203,7 +205,7 @@ export class MonacoWidget extends Widget {
         reconnectionDelayGrowFactor: 1.3,
         connectionTimeout: 10000,
         maxRetries: Infinity,
-        debug: false
+        debug: false,
       };
       // @ts-ignore
       return new ReconnectingWebSocket(url, undefined, socketOptions);
@@ -275,7 +277,6 @@ import { IEditorServices } from '@jupyterlab/codeeditor';
 import { IFileBrowserFactory } from '@jupyterlab/filebrowser';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 // import { find } from '@phosphor/algorithm';
-
 
 /**
  * The namespace for `MonacoEditorFactory` class statics.
