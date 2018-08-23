@@ -194,7 +194,7 @@ export class MonacoWidget extends Widget {
     function createUrl(path: string): string {
       const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
       const userID = localStorage.getItem('user_ID');
-      const projectName = document.title.split(':')[0];
+      const projectName = localStorage.getItem('projectName');
       return normalizeUrl(`${protocol}://${webServer.replace('http://', '')}/hub_api/pyls/${userID}+${projectName}${path}`);
     }
 
