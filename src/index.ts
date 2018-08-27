@@ -437,6 +437,25 @@ const extension: JupyterLabPlugin<void> = {
     }
 
     /**
+     * Create a toExecutable toolbar item.
+     */
+    function createMDButton(context: DocumentRegistry.CodeContext): ToolbarButton {
+
+      return new ToolbarButton({
+        className: 'jp-MarkdownIcon',
+        onClick: () => {
+          const { commands } = app;
+          const options = {
+            path: context.path,
+            options: { mode: 'split-right' },
+          };
+          commands.execute('markdownviewer:open', options);
+        },
+        tooltip: 'Run Script',
+      });
+    }
+
+    /**
      * A document widget for editors.
      */
     class MonacoFileEditor extends Widget implements DocumentRegistry.IReadyWidget {
@@ -460,10 +479,19 @@ const extension: JupyterLabPlugin<void> = {
         // this._onPathChanged();
 
         let layout = this.layout = new PanelLayout();
-        let toolbar = new Toolbar();
-        toolbar.addClass('jp-MonacoPanel-toolbar');
-        toolbar.addItem('run', createRunButton(context));
-        layout.addWidget(toolbar);
+        const ext = context.path.split('.').slice(-1)[0];
+        if (['py', 'md'].includes(ext)) {
+          let toolbar = new Toolbar();
+          toolbar.addClass('jp-MonacoPanel-toolbar');
+          if (ext === 'py') {
+            toolbar.addItem('run', createRunButton(context));
+          }
+          if (ext === 'md') {
+            toolbar.addItem('Markdown Preview', createMDButton(context));
+          }
+          layout.addWidget(toolbar);
+        }
+
         layout.addWidget(editorWidget);
       }
 
