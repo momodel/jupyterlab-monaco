@@ -451,7 +451,7 @@ const extension: JupyterLabPlugin<void> = {
           };
           commands.execute('markdownviewer:open', options);
         },
-        tooltip: 'Run Script',
+        tooltip: 'Markdown Preview',
       });
     }
 
