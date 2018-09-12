@@ -49,6 +49,7 @@ import {
 import {
   Message,
 } from '@phosphor/messaging';
+import { message } from 'antd';
 
 // import {
 //   IDisposable, DisposableDelegate,
@@ -81,6 +82,8 @@ import * as monacoJSON
 import * as monacoTS
 // @ts-ignore: error TS2307: Cannot find module
   from 'file-loader?name=[path][name].[ext]!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-ts.worker.bundle.js';
+
+import {createJob} from './services';
 
 /**
  * The class name added to toolbar run button.
@@ -276,6 +279,7 @@ import { ConsolePanel } from '@jupyterlab/console';
 import { IEditorServices } from '@jupyterlab/codeeditor';
 import { IFileBrowserFactory } from '@jupyterlab/filebrowser';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
+import * as pathToRegexp from 'path-to-regexp';
 // import { find } from '@phosphor/algorithm';
 
 /**
@@ -456,6 +460,30 @@ const extension: JupyterLabPlugin<void> = {
     }
 
     /**
+     * Create a toExecutable toolbar item.
+     */
+    function createLongRunButton(context: DocumentRegistry.CodeContext): ToolbarButton {
+
+      return new ToolbarButton({
+        className: 'jp-MarkdownIcon',
+        onClick: () => {
+          const hash = window.location.hash;
+          const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
+          if (match) {
+            const projectId = match[1];
+            const type = match[2];
+            const scriptPath = context.path;
+            createJob({projectId, type, scriptPath, onJson: () => {
+                message.success('Job created');
+              }});
+
+          }
+        },
+        tooltip: 'Markdown Preview',
+      });
+    }
+
+    /**
      * A document widget for editors.
      */
     class MonacoFileEditor extends Widget implements DocumentRegistry.IReadyWidget {
@@ -485,6 +513,7 @@ const extension: JupyterLabPlugin<void> = {
           toolbar.addClass('jp-MonacoPanel-toolbar');
           if (ext === 'py') {
             toolbar.addItem('run', createRunButton(context));
+            toolbar.addItem('long run', createLongRunButton(context));
           }
           if (ext === 'md') {
             toolbar.addItem('Markdown Preview', createMDButton(context));
