@@ -465,7 +465,7 @@ const extension: JupyterLabPlugin<void> = {
     function createLongRunButton(context: DocumentRegistry.CodeContext): ToolbarButton {
 
       return new ToolbarButton({
-        className: 'jp-MarkdownIcon',
+        className: 'jp-JobIcon',
         onClick: () => {
           const hash = window.location.hash;
           const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
