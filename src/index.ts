@@ -479,7 +479,7 @@ const extension: JupyterLabPlugin<void> = {
 
           }
         },
-        tooltip: 'Markdown Preview',
+        tooltip: 'Create Job',
       });
     }
 
@@ -512,8 +512,8 @@ const extension: JupyterLabPlugin<void> = {
           let toolbar = new Toolbar();
           toolbar.addClass('jp-MonacoPanel-toolbar');
           if (ext === 'py') {
-            toolbar.addItem('run', createRunButton(context));
-            toolbar.addItem('long run', createLongRunButton(context));
+            toolbar.addItem('Run', createRunButton(context));
+            toolbar.addItem('Create Job', createLongRunButton(context));
           }
           if (ext === 'md') {
             toolbar.addItem('Markdown Preview', createMDButton(context));
