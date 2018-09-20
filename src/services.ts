@@ -3,7 +3,7 @@ import { request } from '@jupyterlab/services';
 // import { message } from 'antd';
 import * as path from 'path';
 
-export function createJob({ projectId, type, scriptPath, onJson }) {
+export function createJob({ projectId, type, scriptPath, env, onJson }) {
   return request(path.join('/pyapi', 'jobs'), {
     method: 'post',
     headers: {
@@ -12,6 +12,7 @@ export function createJob({ projectId, type, scriptPath, onJson }) {
     body: JSON.stringify({
       project_id: projectId,
       type,
+      env,
       script_path: scriptPath,
     }),
   }, { onJson });

@@ -15,7 +15,7 @@ import {
 } from '@jupyterlab/application';
 
 import {
-  ICommandPalette,
+  ICommandPalette, showDialog, Dialog,
 } from '@jupyterlab/apputils';
 
 import {
@@ -83,7 +83,7 @@ import * as monacoTS
 // @ts-ignore: error TS2307: Cannot find module
   from 'file-loader?name=[path][name].[ext]!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-ts.worker.bundle.js';
 
-import {createJob} from './services';
+import { createJob } from './services';
 
 /**
  * The class name added to toolbar run button.
@@ -459,6 +459,58 @@ const extension: JupyterLabPlugin<void> = {
       });
     }
 
+    class SelectEnv extends Widget {
+      constructor() {
+        let body = document.createElement('div');
+
+        [['cpu', 'Intel i7 CPU'], ['gpu', 'Nvidia P100 GPU']].forEach(([value, label]) => {
+          let div = document.createElement('div');
+          let existingLabel = document.createElement('label');
+          existingLabel.textContent = label;
+          let input = document.createElement('input');
+          if (value === 'cpu') {
+            input.checked = true;
+          }
+          input.value = value;
+          input.name = 'env-radio';
+          input.className = 'env-radio';
+          input.id = value;
+          input.style.marginRight = '10px';
+          input.type = 'radio';
+          div.style.display = 'flex';
+          div.style.alignItems = 'center';
+          div.style.padding = '5px 5px';
+          div.appendChild(input);
+          div.appendChild(existingLabel);
+          body.appendChild(div);
+
+        });
+
+        super({ node: body });
+      }
+
+      onAfterAttach() {
+        let inputs = this.node.getElementsByTagName('input');
+        for (let inp of inputs as any) {
+          inp.className = 'env-radio';
+        }
+        // inputs.forEach((inp) => {
+        //   inp.className = '';
+        // });
+      }
+
+      getValue(): string {
+        let inputs = this.node.getElementsByTagName('input');
+        console.log(inputs);
+        for (let inp of inputs as any) {
+          if (inp.checked) {
+            return inp.value;
+          }
+        }
+        return 'cpu';
+      }
+    }
+
     /**
      * Create a toExecutable toolbar item.
      */
@@ -467,17 +519,33 @@ const extension: JupyterLabPlugin<void> = {
       return new ToolbarButton({
         className: 'jp-JobIcon',
         onClick: () => {
-          const hash = window.location.hash;
-          const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
-          if (match) {
-            const projectId = match[1];
-            const type = match[2];
-            const scriptPath = context.path;
-            createJob({projectId, type, scriptPath, onJson: () => {
-                message.success('Job created');
-              }});
+          showDialog({
+            title: 'Choose an environment to run your job:',
+            body: new SelectEnv(),
+            focusNodeSelector: 'input',
+            buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'CREATE' })],
+          }).then(result => {
+            if (result.button.label === 'CANCEL') {
+              return;
+            }
 
-          }
+            if (!result.value) {
+              return null;
+            }
+            const hash = window.location.hash;
+            const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
+            if (match) {
+              const projectId = match[1];
+              const type = match[2];
+              const scriptPath = context.path;
+              createJob({
+                projectId, type, scriptPath, env: result.value, onJson: () => {
+                  message.success('Job created');
+                },
+              });
+
+            }
+          });
         },
         tooltip: 'Create Job',
       });
