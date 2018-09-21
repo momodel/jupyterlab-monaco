@@ -538,9 +538,11 @@ const extension: JupyterLabPlugin<void> = {
               const projectId = match[1];
               const type = match[2];
               const scriptPath = context.path;
+              const hide = message.loading('Job creating...');
               createJob({
                 projectId, type, scriptPath, env: result.value, onJson: () => {
                   message.success('Job created');
+                  hide();
                 },
               });
 
