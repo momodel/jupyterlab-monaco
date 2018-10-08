@@ -463,7 +463,7 @@ const extension: JupyterLabPlugin<void> = {
       constructor() {
         let body = document.createElement('div');
 
-        [['cpu', 'Intel i7 CPU'], ['gpu', 'Nvidia P100 GPU']].forEach(([value, label]) => {
+        [['cpu', 'CPU Only Machines'], ['gpu', 'GPU Powered Machines']].forEach(([value, label]) => {
           let div = document.createElement('div');
           let existingLabel = document.createElement('label');
           existingLabel.textContent = label;
