@@ -463,13 +463,17 @@ const extension: JupyterLabPlugin<void> = {
       constructor() {
         let body = document.createElement('div');
 
-        [['cpu', 'CPU Only Machines'], ['gpu', 'GPU Powered Machines']].forEach(([value, label]) => {
+        [['cpu', 'CPU Only Machines'], ['gpu', 'GPU Powered Machines (Coming Soon...)']].forEach(([value, label]) => {
           let div = document.createElement('div');
           let existingLabel = document.createElement('label');
           existingLabel.textContent = label;
           let input = document.createElement('input');
           if (value === 'cpu') {
             input.checked = true;
+          }
+          if (value === 'gpu') {
+            input.disabled = true;
+            existingLabel.style.color = 'lightgrey';
           }
           input.value = value;
           input.name = 'env-radio';
