@@ -49,7 +49,7 @@ import {
 import {
   Message,
 } from '@phosphor/messaging';
-import { message } from 'antd';
+import { message, Modal } from 'antd';
 
 // import {
 //   IDisposable, DisposableDelegate,
@@ -280,6 +280,7 @@ import { IEditorServices } from '@jupyterlab/codeeditor';
 import { IFileBrowserFactory } from '@jupyterlab/filebrowser';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import * as pathToRegexp from 'path-to-regexp';
+import { request } from '@jupyterlab/services';
 // import { find } from '@phosphor/algorithm';
 
 /**
@@ -459,6 +460,56 @@ const extension: JupyterLabPlugin<void> = {
       });
     }
 
+    /**
+     * Create a Collaboration toolbar item.
+     */
+    function createCollabButton(context: DocumentRegistry.CodeContext): ToolbarButton {
+      const hash = window.location.hash;
+      const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
+      // this._text = new ToolbarButton({
+      //   className: 'jp-CollaborationIcon',
+      // });
+      const button = new ToolbarButton({
+        className: 'jp-CollaborationIcon',
+        // onClick: () => {},
+        // tooltip: 'Insert Code Snippets',
+      });
+      request(`pyapi/project/file_locker/${match[1]}?file_path=${context.path}&type=${match[2]}`, {
+          method: 'get',
+          headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token'),
+          },
+        },
+        {
+          onJson: (res: any) => {
+            console.log('ressss', res);
+            if (res.is_locked) {
+              const { user } = res;
+              Modal.warning({
+                title: 'This is file is editing by other collaborator!',
+                content: `${user.username} is editing this file, please come back later or contact with him/her.`,
+              });
+              // this._text.node.style.display = 'block';
+              // this._text.node.innerText = `${user.username} is editing...`;
+              // this._text.node.style.textTransform = 'none';
+              // this._text.node.style.width = '100px';
+              // this._text.node.style.fontSize = '12px';
+              // this._button.node. = 'block';
+
+              button.node.style.display = 'block';
+              button.node.style.backgroundImage = `url(/pyapi/user/avatar/${user.user_ID}.jpeg?${user.avatarV})`;
+              button.node.style.backgroundSize = 'cover';
+              button.node.style.borderRadius = '50%';
+              button.node.style.width = '24px';
+              button.node.style.height = '24px';
+              button.node.title = `${user.username} is editing...`;
+              button.node.onclick = () => window.open(`/#/profile/${user.user_ID}`);
+            }
+          },
+        });
+      return button;
+    }
+
     class SelectEnv extends Widget {
       constructor() {
         let body = document.createElement('div');
@@ -578,9 +629,10 @@ const extension: JupyterLabPlugin<void> = {
 
         let layout = this.layout = new PanelLayout();
         const ext = context.path.split('.').slice(-1)[0];
+        let toolbar = new Toolbar();
+        toolbar.addClass('jp-MonacoPanel-toolbar');
+
         if (['py', 'md'].includes(ext)) {
-          let toolbar = new Toolbar();
-          toolbar.addClass('jp-MonacoPanel-toolbar');
           if (ext === 'py') {
             toolbar.addItem('Run', createRunButton(context));
             toolbar.addItem('Create Job', createLongRunButton(context));
@@ -588,9 +640,11 @@ const extension: JupyterLabPlugin<void> = {
           if (ext === 'md') {
             toolbar.addItem('Markdown Preview', createMDButton(context));
           }
-          layout.addWidget(toolbar);
         }
+        toolbar.addItem('Space', Toolbar.createSpacerItem());
+        toolbar.addItem('collaboration', createCollabButton(context));
 
+        layout.addWidget(toolbar);
         layout.addWidget(editorWidget);
       }
 
