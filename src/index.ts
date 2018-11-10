@@ -497,7 +497,7 @@ const extension: JupyterLabPlugin<void> = {
               // this._button.node. = 'block';
 
               button.node.style.display = 'block';
-              button.node.style.backgroundImage = `url(/pyapi/user/avatar/${user.user_ID}.jpeg?${user.avatarV})`;
+              button.node.style.backgroundImage = `url(${user.avatar_url || `/pyapi/user/avatar/${user.user_ID}.jpeg`})`;
               button.node.style.backgroundSize = 'cover';
               button.node.style.borderRadius = '50%';
               button.node.style.width = '24px';
