@@ -482,11 +482,10 @@ const extension: JupyterLabPlugin<void> = {
         },
         {
           onJson: (res: any) => {
-            console.log('ressss', res);
             if (res.is_locked) {
               const { user } = res;
               Modal.warning({
-                title: 'This is file is editing by other collaborator!',
+                title: 'This file is editing by other collaborator!',
                 content: `${user.username} is editing this file, please come back later or contact with him/her.`,
               });
               // this._text.node.style.display = 'block';
