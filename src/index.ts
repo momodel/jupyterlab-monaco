@@ -158,19 +158,27 @@ export class MonacoWidget extends Widget {
     // install Monaco language client services
     const services = createMonacoServices(this.editor as any);
 
-    // create the web socket
-    const url = createUrl('/sampleServer');
-    const webSocket = createWebSocket(url);
-    // listen when the web socket is opened
-    listen({
-      webSocket,
-      onConnection: connection => {
-        // create and start the language client
-        const languageClient = createLanguageClient(connection);
-        const disposable = languageClient.start();
-        connection.onClose(() => disposable.dispose());
-      },
-    });
+    const hash = window.location.hash;
+    const match = pathToRegexp('#/workspace/:appId/:type').exec(hash);
+    request(`pyapi/project/hub_name/${match[1]}`,
+      undefined,
+      {
+        onJson: (res: any) => {
+          // create the web socket
+          const url = createUrl('/sampleServer', res.hub_name);
+          const webSocket = createWebSocket(url);
+          // listen when the web socket is opened
+          listen({
+            webSocket,
+            onConnection: connection => {
+              // create and start the language client
+              const languageClient = createLanguageClient(connection);
+              const disposable = languageClient.start();
+              connection.onClose(() => disposable.dispose());
+            },
+          });
+        },
+      });
 
     function createLanguageClient(connection: MessageConnection): BaseLanguageClient {
       return new BaseLanguageClient({
@@ -194,11 +202,9 @@ export class MonacoWidget extends Widget {
       });
     }
 
-    function createUrl(path: string): string {
+    function createUrl(path: string, hubName: string): string {
       const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-      const userID = localStorage.getItem('user_ID');
-      const projectName = localStorage.getItem('projectName');
-      return normalizeUrl(`${protocol}://${webServer.replace('http://', '')}/hub_api/pyls/${userID}+${projectName}${path}`);
+      return normalizeUrl(`${protocol}://${webServer.replace('http://', '')}/hub_api/pyls/${hubName}${path}`);
     }
 
     function createWebSocket(url: string): WebSocket {
