@@ -597,6 +597,7 @@ const extension: JupyterLabPlugin<void> = {
               const hide = message.loading('Job creating...');
               createJob({
                 projectId, type, scriptPath, env: result.value, onJson: () => {
+                  app.shell.activateById('jobs-manager');
                   message.success('Job created');
                   hide();
                 },
