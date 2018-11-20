@@ -51,6 +51,8 @@ import {
 } from '@phosphor/messaging';
 import { message, Modal } from 'antd';
 
+// import * as _ from 'lodash';
+
 // import {
 //   IDisposable, DisposableDelegate,
 // } from '@phosphor/disposable';
@@ -594,7 +596,7 @@ const extension: JupyterLabPlugin<void> = {
               const projectId = match[1];
               const type = match[2];
               const scriptPath = context.path;
-              const hide = message.loading('Job creating...');
+              const hide = message.loading('Job creating...', 0);
               createJob({
                 projectId, type, scriptPath, env: result.value, onJson: () => {
                   app.shell.activateById('jobs-manager');
