@@ -18,3 +18,7 @@
     background: var(--jp-toolbar-background);
     z-index: 1;
 }
+
+.monaco-job-name-input {
+    width: 250px;
+}

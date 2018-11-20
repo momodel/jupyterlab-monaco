@@ -416,38 +416,38 @@ const extension: JupyterLabPlugin<void> = {
       }
     }
 
-    /**
-     * Create a toExecutable toolbar item.
-     */
-    function createRunButton(context: DocumentRegistry.CodeContext): ToolbarButton {
-
-      return new ToolbarButton({
-        className: TOOLBAR_RUN_CLASS,
-        onClick: () => {
-          // const { commands } = app;
-          const options = {
-            name: `Run: Python`,
-            path: context.path,
-            preferredLanguage: context.model.defaultKernelLanguage,
-            kernelPreference: { name: 'python3' },
-            insertMode: 'split-bottom',
-          };
-
-          openConsole(options)
-            .then((consolePanel) => {
-              const { console: currentConsole } = consolePanel;
-              let promptCell = currentConsole.promptCell;
-              if (!promptCell) {
-                return;
-              }
-              let model = promptCell.model;
-              model.value.text = `!python ${context.contentsModel.name}`;
-              currentConsole.execute(true);
-            });
-        },
-        tooltip: 'Run Script',
-      });
-    }
+    // /**
+    //  * Create a toExecutable toolbar item.
+    //  */
+    // function createRunButton(context: DocumentRegistry.CodeContext): ToolbarButton {
+    //
+    //   return new ToolbarButton({
+    //     className: TOOLBAR_RUN_CLASS,
+    //     onClick: () => {
+    //       // const { commands } = app;
+    //       const options = {
+    //         name: `Run: Python`,
+    //         path: context.path,
+    //         preferredLanguage: context.model.defaultKernelLanguage,
+    //         kernelPreference: { name: 'python3' },
+    //         insertMode: 'split-bottom',
+    //       };
+    //
+    //       openConsole(options)
+    //         .then((consolePanel) => {
+    //           const { console: currentConsole } = consolePanel;
+    //           let promptCell = currentConsole.promptCell;
+    //           if (!promptCell) {
+    //             return;
+    //           }
+    //           let model = promptCell.model;
+    //           model.value.text = `!python ${context.contentsModel.name}`;
+    //           currentConsole.execute(true);
+    //         });
+    //     },
+    //     tooltip: 'Run Script',
+    //   });
+    // }
 
     /**
      * Create a toExecutable toolbar item.
@@ -520,13 +520,22 @@ const extension: JupyterLabPlugin<void> = {
     class SelectEnv extends Widget {
       constructor() {
         let body = document.createElement('div');
+        let nameDiv = document.createElement('div');
+        let nameInput = document.createElement('input');
+        nameInput.className = 'monaco-job-name-input';
+        nameInput.placeholder = '(Optional) Enter job name';
+        nameInput.id = 'monaco-job-name-input';
+        nameDiv.appendChild(nameInput);
+        body.appendChild(nameDiv);
 
-        [['cpu', 'CPU Only Machines'], ['gpu', 'GPU Powered Machines']].forEach(([value, label]) => {
+        [['notebook', 'Run in Notebook Console'],
+          ['cpu', 'CPU Only Machines'],
+          ['gpu', 'GPU Powered Machines']].forEach(([value, label]) => {
           let div = document.createElement('div');
           let existingLabel = document.createElement('label');
           existingLabel.textContent = label;
           let input = document.createElement('input');
-          if (value === 'cpu') {
+          if (value === 'notebook') {
             input.checked = true;
           }
           input.value = value;
@@ -541,7 +550,6 @@ const extension: JupyterLabPlugin<void> = {
           div.appendChild(input);
           div.appendChild(existingLabel);
           body.appendChild(div);
-
         });
 
         super({ node: body });
@@ -550,22 +558,26 @@ const extension: JupyterLabPlugin<void> = {
       onAfterAttach() {
         let inputs = this.node.getElementsByTagName('input');
         for (let inp of inputs as any) {
-          inp.className = 'env-radio';
+          if (inp.id !== 'monaco-job-name-input') {
+            inp.className = 'env-radio';
+          }
         }
         // inputs.forEach((inp) => {
         //   inp.className = '';
         // });
       }
 
-      getValue(): string {
+      getValue(): string[] {
         let inputs = this.node.getElementsByTagName('input');
-        console.log(inputs);
+        const name = (document.getElementById('monaco-job-name-input') as HTMLInputElement).value;
+        console.log(inputs, name);
+
         for (let inp of inputs as any) {
           if (inp.checked) {
-            return inp.value;
+            return [inp.value, name];
           }
         }
-        return 'cpu';
+        return ['notebook', undefined];
       }
     }
 
@@ -575,7 +587,7 @@ const extension: JupyterLabPlugin<void> = {
     function createLongRunButton(context: DocumentRegistry.CodeContext): ToolbarButton {
 
       return new ToolbarButton({
-        className: 'jp-JobIcon',
+        className: TOOLBAR_RUN_CLASS,
         onClick: () => {
           showDialog({
             title: 'Choose an environment to run your job:',
@@ -590,6 +602,28 @@ const extension: JupyterLabPlugin<void> = {
             if (!result.value) {
               return null;
             }
+            if (result.value[0] === 'notebook') {
+              const options = {
+                name: `Run: ${result.value[1] ? result.value[1] : 'Python'}`,
+                path: context.path,
+                preferredLanguage: context.model.defaultKernelLanguage,
+                kernelPreference: { name: 'python3' },
+                insertMode: 'split-bottom',
+              };
+
+              openConsole(options)
+                .then((consolePanel) => {
+                  const { console: currentConsole } = consolePanel;
+                  let promptCell = currentConsole.promptCell;
+                  if (!promptCell) {
+                    return;
+                  }
+                  let model = promptCell.model;
+                  model.value.text = `!python ${context.contentsModel.name}`;
+                  currentConsole.execute(true);
+                });
+              return;
+            }
             const hash = window.location.hash;
             const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
             if (match) {
@@ -598,7 +632,7 @@ const extension: JupyterLabPlugin<void> = {
               const scriptPath = context.path;
               const hide = message.loading('Job creating...', 0);
               createJob({
-                projectId, type, scriptPath, env: result.value, onJson: () => {
+                projectId, type, scriptPath, env: result.value[0], displayName: result.value[1], onJson: () => {
                   app.shell.activateById('jobs-manager');
                   message.success('Job created');
                   hide();
@@ -642,7 +676,7 @@ const extension: JupyterLabPlugin<void> = {
 
         if (['py', 'md'].includes(ext)) {
           if (ext === 'py') {
-            toolbar.addItem('Run', createRunButton(context));
+            // toolbar.addItem('Run', createRunButton(context));
             toolbar.addItem('Create Job', createLongRunButton(context));
           }
           if (ext === 'md') {
