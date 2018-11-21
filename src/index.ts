@@ -532,7 +532,7 @@ const extension: JupyterLabPlugin<void> = {
         // envLabel.textContent = 'Choose running env: ';
         // body.appendChild(envLabel);
 
-        [['notebook', 'Run in Notebook Console'],
+        [['notebook', 'Notebook Console'],
           ['cpu', 'CPU Only Machines'],
           ['gpu', 'GPU Powered Machines']].forEach(([value, label]) => {
           let div = document.createElement('div');
