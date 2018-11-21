@@ -525,8 +525,12 @@ const extension: JupyterLabPlugin<void> = {
         nameInput.className = 'monaco-job-name-input';
         nameInput.placeholder = '(Optional) Enter job name';
         nameInput.id = 'monaco-job-name-input';
+        nameInput.style.marginBottom = '10px';
         nameDiv.appendChild(nameInput);
         body.appendChild(nameDiv);
+        // let envLabel = document.createElement('h3');
+        // envLabel.textContent = 'Choose running env: ';
+        // body.appendChild(envLabel);
 
         [['notebook', 'Run in Notebook Console'],
           ['cpu', 'CPU Only Machines'],
@@ -534,6 +538,7 @@ const extension: JupyterLabPlugin<void> = {
           let div = document.createElement('div');
           let existingLabel = document.createElement('label');
           existingLabel.textContent = label;
+          existingLabel.htmlFor = value;
           let input = document.createElement('input');
           if (value === 'notebook') {
             input.checked = true;
