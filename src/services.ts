@@ -18,3 +18,8 @@ export function createJob({ projectId, type, scriptPath, env, displayName, onJso
     }),
   }, { onJson });
 }
+
+
+export function getUserInfo({ user_ID }) {
+  return request(`/pyapi/user/profile/${user_ID}`, { method: 'get', }, { });
+}

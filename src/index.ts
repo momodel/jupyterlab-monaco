@@ -85,7 +85,7 @@ import * as monacoTS
 // @ts-ignore: error TS2307: Cannot find module
   from 'file-loader?name=[path][name].[ext]!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-ts.worker.bundle.js';
 
-import { createJob } from './services';
+import { createJob, getUserInfo } from './services';
 
 /**
  * The class name added to toolbar run button.
@@ -518,7 +518,7 @@ const extension: JupyterLabPlugin<void> = {
     }
 
     class SelectEnv extends Widget {
-      constructor() {
+      constructor(user_ID,gpu_time_limit) {
         let body = document.createElement('div');
         let nameDiv = document.createElement('div');
         let nameInput = document.createElement('input');
@@ -533,8 +533,7 @@ const extension: JupyterLabPlugin<void> = {
         // body.appendChild(envLabel);
 
         [['notebook', 'Notebook Console'],
-          ['cpu', 'CPU Only Machines'],
-          ['gpu', 'GPU Powered Machines']].forEach(([value, label]) => {
+          ['cpu', 'CPU Only Machines']].forEach(([value, label]) => {
           let div = document.createElement('div');
           let existingLabel = document.createElement('label');
           existingLabel.textContent = label;
@@ -556,6 +555,40 @@ const extension: JupyterLabPlugin<void> = {
           div.appendChild(existingLabel);
           body.appendChild(div);
         });
+
+        const gpu_hour = gpu_time_limit ? Math.floor(gpu_time_limit / 3600) : 0;
+        const gpu_minutes = gpu_time_limit ? Math.round((gpu_time_limit - gpu_hour*3600)/60) : 0;
+
+        let div1 = document.createElement('div');
+        let existingLabel = document.createElement('label');
+        existingLabel.textContent = `GPU Powered Machines (剩余 ${gpu_hour} 小时, ${gpu_minutes} 分钟)`;
+        existingLabel.htmlFor = 'gpu';
+        let input = document.createElement('input');
+        input.value = 'gpu';
+        input.name = 'env-radio';
+        input.className = 'env-radio';
+        input.id = 'gpu';
+        input.style.marginRight = '10px';
+        input.type = 'radio';
+        if(gpu_time_limit < 0){
+          input.disabled = true;
+        }
+        div1.style.display = 'flex';
+        div1.style.alignItems = 'center';
+        div1.style.padding = '5px 5px';
+        div1.appendChild(input);
+        div1.appendChild(existingLabel);
+        body.appendChild(div1);
+        let div2 = document.createElement('div');
+        let invite = document.createElement('a')
+        invite.textContent = `邀请好友获得更多免费GPU使用时间`;
+        invite.href = `/#/setting/profile/${user_ID}`;
+        invite.target = "_blank";
+        div2.style.display = 'flex';
+        div2.style.alignItems = 'center';
+        div2.style.padding = '5px 5px 5px 28px';
+        div2.appendChild(invite);
+        body.appendChild(div2);
 
         super({ node: body });
       }
@@ -590,62 +623,70 @@ const extension: JupyterLabPlugin<void> = {
      * Create a toExecutable toolbar item.
      */
     function createLongRunButton(context: DocumentRegistry.CodeContext): ToolbarButton {
-
       return new ToolbarButton({
         className: TOOLBAR_RUN_CLASS,
         onClick: () => {
-          showDialog({
-            title: 'Choose an environment to run your job:',
-            body: new SelectEnv(),
-            focusNodeSelector: 'input',
-            buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'CREATE' })],
-          }).then(result => {
-            if (result.button.label === 'CANCEL') {
-              return;
-            }
+          const user_ID = localStorage.getItem('user_ID');
+          console.log('user_ID...', user_ID);
+          let gpu_time_limit;
+          getUserInfo({ user_ID }).then((res) => {
+            console.log('user_info...', res);
+            gpu_time_limit = res.data.gpu_time_limit || 0;
+            console.log('gpu_time_limit...', gpu_time_limit);
 
-            if (!result.value) {
-              return null;
-            }
-            if (result.value[0] === 'notebook') {
-              const options = {
-                name: `Run: ${result.value[1] ? result.value[1] : 'Python'}`,
-                path: context.path,
-                preferredLanguage: context.model.defaultKernelLanguage,
-                kernelPreference: { name: 'python3' },
-                insertMode: 'split-bottom',
-              };
+            showDialog({
+              title: 'Choose an environment to run your job:',
+              body: new SelectEnv(user_ID, gpu_time_limit),
+              focusNodeSelector: 'input',
+              buttons: [Dialog.cancelButton(), Dialog.okButton({ accept: true, label: 'CREATE' })],
+            }).then(result => {
+              if (result.button.label === 'CANCEL') {
+                return;
+              }
 
-              openConsole(options)
-                .then((consolePanel) => {
-                  const { console: currentConsole } = consolePanel;
-                  let promptCell = currentConsole.promptCell;
-                  if (!promptCell) {
-                    return;
-                  }
-                  let model = promptCell.model;
-                  model.value.text = `!python ${context.contentsModel.name}`;
-                  currentConsole.execute(true);
+              if (!result.value) {
+                return null;
+              }
+              if (result.value[0] === 'notebook') {
+                const options = {
+                  name: `Run: ${result.value[1] ? result.value[1] : 'Python'}`,
+                  path: context.path,
+                  preferredLanguage: context.model.defaultKernelLanguage,
+                  kernelPreference: { name: 'python3' },
+                  insertMode: 'split-bottom',
+                };
+
+                openConsole(options)
+                  .then((consolePanel) => {
+                    const { console: currentConsole } = consolePanel;
+                    let promptCell = currentConsole.promptCell;
+                    if (!promptCell) {
+                      return;
+                    }
+                    let model = promptCell.model;
+                    model.value.text = `!python ${context.contentsModel.name}`;
+                    currentConsole.execute(true);
+                  });
+                return;
+              }
+              const hash = window.location.hash;
+              const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
+              if (match) {
+                const projectId = match[1];
+                const type = match[2];
+                const scriptPath = context.path;
+                const hide = message.loading('Job creating...', 0);
+                createJob({
+                  projectId, type, scriptPath, env: result.value[0], displayName: result.value[1], onJson: () => {
+                    app.shell.activateById('jobs-manager');
+                    message.success('Job created');
+                    hide();
+                  },
                 });
-              return;
-            }
-            const hash = window.location.hash;
-            const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
-            if (match) {
-              const projectId = match[1];
-              const type = match[2];
-              const scriptPath = context.path;
-              const hide = message.loading('Job creating...', 0);
-              createJob({
-                projectId, type, scriptPath, env: result.value[0], displayName: result.value[1], onJson: () => {
-                  app.shell.activateById('jobs-manager');
-                  message.success('Job created');
-                  hide();
-                },
-              });
-
-            }
+              }
+            });
           });
+          console.log('gpu_time_limit111...', gpu_time_limit);
         },
         tooltip: 'Create Job',
       });
