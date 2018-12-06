@@ -52,7 +52,7 @@ import {
 import { message, Modal } from 'antd';
 
 // import * as _ from 'lodash';
-
+// var algorithm_1 = require("@phosphor/algorithm");
 // import {
 //   IDisposable, DisposableDelegate,
 // } from '@phosphor/disposable';
@@ -469,6 +469,25 @@ const extension: JupyterLabPlugin<void> = {
     }
 
     /**
+     * Create a toExecutable toolbar item.
+     */
+    function createSaveButton(context: DocumentRegistry.CodeContext): ToolbarButton {
+
+      return new ToolbarButton({
+        className: 'jp-SaveIcon',
+        onClick: () => {
+          const { commands } = app;
+          const options = {
+            path: context.path,
+            options: { mode: 'split-right' },
+          };
+          commands.execute('docmanager:save', options);
+        },
+        tooltip: 'Save your file.',
+      });
+    }
+
+    /**
      * Create a Collaboration toolbar item.
      */
     function createCollabButton(context: DocumentRegistry.CodeContext): ToolbarButton {
@@ -719,7 +738,7 @@ const extension: JupyterLabPlugin<void> = {
         const ext = context.path.split('.').slice(-1)[0];
         let toolbar = new Toolbar();
         toolbar.addClass('jp-MonacoPanel-toolbar');
-
+        toolbar.addItem('Save', createSaveButton(context));
         if (['py', 'md'].includes(ext)) {
           if (ext === 'py') {
             // toolbar.addItem('Run', createRunButton(context));
@@ -805,14 +824,14 @@ const extension: JupyterLabPlugin<void> = {
     const command: string = 'monaco:open';
     app.commands.addCommand(command, {
       label: 'Monaco Editor',
-      execute: () => {
-        let widget = new Widget();
-        widget.node.innerHTML = 'Creating new files coming...';
-        // let widget = new MonacoWidget();
+      execute: (args) => {
+        const path = args['path'] as string || void 0;
+        const factory = args['factory'] as string || void 0;
+        let widget = browserFactory.defaultBrowser.model.manager.openOrReveal(path, factory);
         app.shell.addToMainArea(widget);
-
         // Activate the widget
         app.shell.activateById(widget.id);
+        return widget;
       },
     });
 
