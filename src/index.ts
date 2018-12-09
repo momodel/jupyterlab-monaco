@@ -85,7 +85,7 @@ import * as monacoTS
 // @ts-ignore: error TS2307: Cannot find module
   from 'file-loader?name=[path][name].[ext]!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-ts.worker.bundle.js';
 
-import { createJob, getUserInfo } from './services';
+import { createJob, getUserInfo, getUserJobs } from './services';
 
 /**
  * The class name added to toolbar run button.
@@ -536,8 +536,20 @@ const extension: JupyterLabPlugin<void> = {
       return button;
     }
 
+
+    function changeType(e,queuingNumber,runningNumber){
+      if (e.target.value==='notebook'){
+        document.getElementById('Notice').innerText=``
+      }
+      else if(e.target.value==='cpu')
+        document.getElementById('Notice').innerText=`Notice: You have ${runningNumber} projetcs are running.`
+      else if(e.target.value==='gpu'){
+        document.getElementById('Notice').innerText=`Notice: You have ${queuingNumber} projects are queuing,  ${runningNumber} projetcs are running.`
+      }
+    }
+
     class SelectEnv extends Widget {
-      constructor(user_ID,gpu_time_limit) {
+      constructor(user_ID, gpu_time_limit,queuingNumber,runningNumber) {
         let body = document.createElement('div');
         let nameDiv = document.createElement('div');
         let nameInput = document.createElement('input');
@@ -567,6 +579,7 @@ const extension: JupyterLabPlugin<void> = {
           input.id = value;
           input.style.marginRight = '10px';
           input.type = 'radio';
+          input.onclick = (e)=>changeType(e,queuingNumber,runningNumber);
           div.style.display = 'flex';
           div.style.alignItems = 'center';
           div.style.padding = '5px 5px';
@@ -576,7 +589,7 @@ const extension: JupyterLabPlugin<void> = {
         });
 
         const gpu_hour = gpu_time_limit ? Math.floor(gpu_time_limit / 3600) : 0;
-        const gpu_minutes = gpu_time_limit ? Math.round((gpu_time_limit - gpu_hour*3600)/60) : 0;
+        const gpu_minutes = gpu_time_limit ? Math.round((gpu_time_limit - gpu_hour * 3600) / 60) : 0;
 
         let div1 = document.createElement('div');
         let existingLabel = document.createElement('label');
@@ -589,7 +602,8 @@ const extension: JupyterLabPlugin<void> = {
         input.id = 'gpu';
         input.style.marginRight = '10px';
         input.type = 'radio';
-        if(gpu_time_limit < 0){
+        input.onclick = (e)=>changeType(e,queuingNumber,runningNumber);
+        if (gpu_time_limit < 0) {
           input.disabled = true;
         }
         div1.style.display = 'flex';
@@ -599,21 +613,30 @@ const extension: JupyterLabPlugin<void> = {
         div1.appendChild(existingLabel);
         body.appendChild(div1);
         let div2 = document.createElement('div');
-        let invite = document.createElement('a')
+        let invite = document.createElement('a');
         invite.textContent = `邀请好友获得更多免费GPU使用时间`;
         invite.href = `/#/event`;
-        invite.target = "_blank";
+        invite.target = '_blank';
         div2.style.display = 'flex';
         div2.style.alignItems = 'center';
         div2.style.padding = '5px 5px 5px 28px';
         div2.appendChild(invite);
         body.appendChild(div2);
+        let div3 = document.createElement('div');
+        let notice = document.createElement('div');
+        notice.textContent = ``;
+        notice.id = 'Notice';
+        div3.style.padding = '5px 5px';
+        div3.style.color = 'grey';
+        div3.appendChild(notice);
+        body.appendChild(div3);
 
         super({ node: body });
       }
 
       onAfterAttach() {
         let inputs = this.node.getElementsByTagName('input');
+        console.log('sssss',inputs, name);
         for (let inp of inputs as any) {
           if (inp.id !== 'monaco-job-name-input') {
             inp.className = 'env-radio';
@@ -636,6 +659,9 @@ const extension: JupyterLabPlugin<void> = {
         }
         return ['notebook', undefined];
       }
+
+
+
     }
 
     /**
@@ -646,23 +672,36 @@ const extension: JupyterLabPlugin<void> = {
         className: TOOLBAR_RUN_CLASS,
         onClick: () => {
           const user_ID = localStorage.getItem('user_ID');
-          console.log('user_ID...', user_ID);
-          let gpu_time_limit;
-          getUserInfo({ user_ID }).then((res) => {
-            console.log('user_info...', res);
-            gpu_time_limit = res.data.gpu_time_limit || 0;
-            console.log('gpu_time_limit...', gpu_time_limit);
+          const hash = window.location.hash;
+          const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
+          // console.log('user_ID...', user_ID);
 
+          let projectId = match[1];
+          let projectType = match[2];
+          let gpu_time_limit = 0;
+          let queuingNumber = 0;
+          let runningNumber = 0;
+
+          let a = getUserInfo({ user_ID })
+
+          let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
+          // get User queueing jobs
+          let c = getUserJobs({ projectId, projectType, status: 'Running' });
+
+          Promise.all([a, b, c]).then(([res1, res2, res3]) => {
+            gpu_time_limit = res1.data.gpu_time_limit || 0;
+            queuingNumber = res2.data.count;
+            runningNumber = res3.data.count;
+            // console.log('gpu_time_limit...', gpu_time_limit);
             showDialog({
               title: 'Choose an environment to run your job:',
-              body: new SelectEnv(user_ID, gpu_time_limit),
+              body: new SelectEnv(user_ID, gpu_time_limit, queuingNumber, runningNumber),
               focusNodeSelector: 'input',
               buttons: [Dialog.cancelButton(), Dialog.okButton({ accept: true, label: 'CREATE' })],
             }).then(result => {
               if (result.button.label === 'CANCEL') {
                 return;
               }
-
               if (!result.value) {
                 return null;
               }
@@ -674,7 +713,6 @@ const extension: JupyterLabPlugin<void> = {
                   kernelPreference: { name: 'python3' },
                   insertMode: 'split-bottom',
                 };
-
                 openConsole(options)
                   .then((consolePanel) => {
                     const { console: currentConsole } = consolePanel;
@@ -705,7 +743,7 @@ const extension: JupyterLabPlugin<void> = {
               }
             });
           });
-          console.log('gpu_time_limit111...', gpu_time_limit);
+          // console.log('gpu_time_limit111...', gpu_time_limit);
         },
         tooltip: 'Create Job',
       });

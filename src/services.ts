@@ -19,7 +19,13 @@ export function createJob({ projectId, type, scriptPath, env, displayName, onJso
   }, { onJson });
 }
 
-
 export function getUserInfo({ user_ID }) {
-  return request(`/pyapi/user/profile/${user_ID}`, { method: 'get', }, { });
+  return request(`/pyapi/user/profile/${user_ID}`, { method: 'get' }, {});
 }
+
+export function getUserJobs({   projectId, projectType, status,  }) {
+  let url = `/pyapi/jobs/project/${projectType}/${projectId}?status=${status}`;
+  return request(url, undefined, {  });
+}
+
+
