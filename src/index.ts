@@ -542,17 +542,21 @@ const extension: JupyterLabPlugin<void> = {
         document.getElementById('Notice').innerText=``
       }
       else if(e.target.value==='cpu')
-        document.getElementById('Notice').innerText=`Notice: You have ${runningNumber} projetcs are running.`
+        document.getElementById('Notice').innerText=`Notice: You have ${runningNumber} jobs are running.`
       else if(e.target.value==='gpu'){
-        document.getElementById('Notice').innerText=`Notice: You have ${queuingNumber} projects are queuing,  ${runningNumber} projetcs are running.`
+        document.getElementById('Notice').innerText=`Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`
       }
     }
 
     class SelectEnv extends Widget {
-      constructor(user_ID, gpu_time_limit,queuingNumber,runningNumber) {
+      constructor(user_ID, gpu_time_limit,projectId, projectType) {
         let body = document.createElement('div');
         let nameDiv = document.createElement('div');
         let nameInput = document.createElement('input');
+
+        let queuingNumber = 0
+        let runningNumber = 0
+
         nameInput.className = 'monaco-job-name-input';
         nameInput.placeholder = '(Optional) Enter job name';
         nameInput.id = 'monaco-job-name-input';
@@ -631,6 +635,19 @@ const extension: JupyterLabPlugin<void> = {
         div3.appendChild(notice);
         body.appendChild(div3);
 
+
+        let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
+        // get User queueing jobs
+        let c = getUserJobs({ projectId, projectType, status: 'Running' });
+
+        Promise.all([b, c]).then(([res2, res3]) => {
+          queuingNumber = res2.data.count;
+          runningNumber = res3.data.count;
+          document.getElementById('cpu').onclick = (e)=>changeType(e,queuingNumber,runningNumber);
+          document.getElementById('gpu').onclick = (e)=>changeType(e,queuingNumber,runningNumber);
+
+        })
+
         super({ node: body });
       }
 
@@ -679,23 +696,23 @@ const extension: JupyterLabPlugin<void> = {
           let projectId = match[1];
           let projectType = match[2];
           let gpu_time_limit = 0;
-          let queuingNumber = 0;
-          let runningNumber = 0;
+          // let queuingNumber = 0;
+          // let runningNumber = 0;
 
           let a = getUserInfo({ user_ID })
 
-          let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
+          // let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
           // get User queueing jobs
-          let c = getUserJobs({ projectId, projectType, status: 'Running' });
+          // let c = getUserJobs({ projectId, projectType, status: 'Running' });
 
-          Promise.all([a, b, c]).then(([res1, res2, res3]) => {
+          Promise.all([a]).then(([res1]) => {
             gpu_time_limit = res1.data.gpu_time_limit || 0;
-            queuingNumber = res2.data.count;
-            runningNumber = res3.data.count;
+            // queuingNumber = res2.data.count;
+            // runningNumber = res3.data.count;
             // console.log('gpu_time_limit...', gpu_time_limit);
             showDialog({
               title: 'Choose an environment to run your job:',
-              body: new SelectEnv(user_ID, gpu_time_limit, queuingNumber, runningNumber),
+              body: new SelectEnv(user_ID, gpu_time_limit, projectId, projectType),
               focusNodeSelector: 'input',
               buttons: [Dialog.cancelButton(), Dialog.okButton({ accept: true, label: 'CREATE' })],
             }).then(result => {
