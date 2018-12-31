@@ -536,26 +536,24 @@ const extension: JupyterLabPlugin<void> = {
       return button;
     }
 
-
-    function changeType(e,queuingNumber,runningNumber){
-      if (e.target.value==='notebook'){
-        document.getElementById('Notice').innerText=``
-      }
-      else if(e.target.value==='cpu')
-        document.getElementById('Notice').innerText=`Notice: You have ${runningNumber} jobs are running.`
-      else if(e.target.value==='gpu'){
-        document.getElementById('Notice').innerText=`Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`
+    function changeType(e, queuingNumber, runningNumber) {
+      if (e.target.value === 'notebook') {
+        document.getElementById('Notice').innerText = ``;
+      } else if (e.target.value === 'cpu') {
+        document.getElementById('Notice').innerText = `Notice: You have ${runningNumber} jobs are running.`;
+      } else if (e.target.value === 'gpu') {
+        document.getElementById('Notice').innerText = `Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`;
       }
     }
 
     class SelectEnv extends Widget {
-      constructor(user_ID, gpu_time_limit,projectId, projectType) {
+      constructor(user_ID, gpu_time_limit, projectId, projectType) {
         let body = document.createElement('div');
         let nameDiv = document.createElement('div');
         let nameInput = document.createElement('input');
 
-        let queuingNumber = 0
-        let runningNumber = 0
+        let queuingNumber = 0;
+        let runningNumber = 0;
 
         nameInput.className = 'monaco-job-name-input';
         nameInput.placeholder = '(Optional) Enter job name';
@@ -583,7 +581,7 @@ const extension: JupyterLabPlugin<void> = {
           input.id = value;
           input.style.marginRight = '10px';
           input.type = 'radio';
-          input.onclick = (e)=>changeType(e,queuingNumber,runningNumber);
+          input.onclick = (e) => changeType(e, queuingNumber, runningNumber);
           div.style.display = 'flex';
           div.style.alignItems = 'center';
           div.style.padding = '5px 5px';
@@ -606,7 +604,7 @@ const extension: JupyterLabPlugin<void> = {
         input.id = 'gpu';
         input.style.marginRight = '10px';
         input.type = 'radio';
-        input.onclick = (e)=>changeType(e,queuingNumber,runningNumber);
+        input.onclick = (e) => changeType(e, queuingNumber, runningNumber);
         if (gpu_time_limit < 0) {
           input.disabled = true;
         }
@@ -635,7 +633,6 @@ const extension: JupyterLabPlugin<void> = {
         div3.appendChild(notice);
         body.appendChild(div3);
 
-
         let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
         // get User queueing jobs
         let c = getUserJobs({ projectId, projectType, status: 'Running' });
@@ -643,17 +640,16 @@ const extension: JupyterLabPlugin<void> = {
         Promise.all([b, c]).then(([res2, res3]) => {
           queuingNumber = res2.data.count;
           runningNumber = res3.data.count;
-          document.getElementById('cpu').onclick = (e)=>changeType(e,queuingNumber,runningNumber);
-          document.getElementById('gpu').onclick = (e)=>changeType(e,queuingNumber,runningNumber);
-
-        })
+          document.getElementById('cpu').onclick = (e) => changeType(e, queuingNumber, runningNumber);
+          document.getElementById('gpu').onclick = (e) => changeType(e, queuingNumber, runningNumber);
+        });
 
         super({ node: body });
       }
 
       onAfterAttach() {
         let inputs = this.node.getElementsByTagName('input');
-        console.log('sssss',inputs, name);
+        console.log('sssss', inputs, name);
         for (let inp of inputs as any) {
           if (inp.id !== 'monaco-job-name-input') {
             inp.className = 'env-radio';
@@ -677,8 +673,6 @@ const extension: JupyterLabPlugin<void> = {
         return ['notebook', undefined];
       }
 
-
-
     }
 
     /**
@@ -699,7 +693,7 @@ const extension: JupyterLabPlugin<void> = {
           // let queuingNumber = 0;
           // let runningNumber = 0;
 
-          let a = getUserInfo({ user_ID })
+          let a = getUserInfo({ user_ID });
 
           // let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
           // get User queueing jobs
