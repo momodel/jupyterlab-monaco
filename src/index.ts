@@ -536,24 +536,26 @@ const extension: JupyterLabPlugin<void> = {
       return button;
     }
 
-    function changeType(e, queuingNumber, runningNumber) {
-      if (e.target.value === 'notebook') {
-        document.getElementById('Notice').innerText = ``;
-      } else if (e.target.value === 'cpu') {
-        document.getElementById('Notice').innerText = `Notice: You have ${runningNumber} jobs are running.`;
-      } else if (e.target.value === 'gpu') {
-        document.getElementById('Notice').innerText = `Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`;
+
+    function changeType(e,queuingNumber,runningNumber){
+      if (e.target.value==='notebook'){
+        document.getElementById('Notice').innerText=``
+      }
+      else if(e.target.value==='cpu')
+        document.getElementById('Notice').innerText=`Notice: You have ${runningNumber} jobs are running.`
+      else if(e.target.value==='gpu'){
+        document.getElementById('Notice').innerText=`Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`
       }
     }
 
     class SelectEnv extends Widget {
-      constructor(user_ID, gpu_time_limit, projectId, projectType) {
+      constructor(user_ID, gpu_time_limit,projectId, projectType,email_verified) {
         let body = document.createElement('div');
         let nameDiv = document.createElement('div');
         let nameInput = document.createElement('input');
 
-        let queuingNumber = 0;
-        let runningNumber = 0;
+        let queuingNumber = 0
+        let runningNumber = 0
 
         nameInput.className = 'monaco-job-name-input';
         nameInput.placeholder = '(Optional) Enter job name';
@@ -581,7 +583,7 @@ const extension: JupyterLabPlugin<void> = {
           input.id = value;
           input.style.marginRight = '10px';
           input.type = 'radio';
-          input.onclick = (e) => changeType(e, queuingNumber, runningNumber);
+          input.onclick = (e)=>changeType(e,queuingNumber,runningNumber);
           div.style.display = 'flex';
           div.style.alignItems = 'center';
           div.style.padding = '5px 5px';
@@ -604,8 +606,8 @@ const extension: JupyterLabPlugin<void> = {
         input.id = 'gpu';
         input.style.marginRight = '10px';
         input.type = 'radio';
-        input.onclick = (e) => changeType(e, queuingNumber, runningNumber);
-        if (gpu_time_limit < 0) {
+        input.onclick = (e)=>changeType(e,queuingNumber,runningNumber);
+        if (gpu_time_limit < 0 || !email_verified) {
           input.disabled = true;
         }
         div1.style.display = 'flex';
@@ -616,9 +618,18 @@ const extension: JupyterLabPlugin<void> = {
         body.appendChild(div1);
         let div2 = document.createElement('div');
         let invite = document.createElement('a');
-        invite.textContent = `邀请好友获得更多免费GPU使用时间`;
-        invite.href = `/#/event`;
-        invite.target = '_blank';
+        if (email_verified){
+          invite.textContent = `邀请好友获得更多免费GPU使用时间`;
+          invite.href = `/#/event`;
+          invite.target = '_blank';
+        }
+        else{
+          invite.textContent = `激活邮箱以获得 GPU 使用权限`;
+          invite.href = `/#/setting/profile/${user_ID}`;
+          invite.target = '_blank';
+        }
+
+
         div2.style.display = 'flex';
         div2.style.alignItems = 'center';
         div2.style.padding = '5px 5px 5px 28px';
@@ -633,6 +644,7 @@ const extension: JupyterLabPlugin<void> = {
         div3.appendChild(notice);
         body.appendChild(div3);
 
+
         let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
         // get User queueing jobs
         let c = getUserJobs({ projectId, projectType, status: 'Running' });
@@ -640,16 +652,17 @@ const extension: JupyterLabPlugin<void> = {
         Promise.all([b, c]).then(([res2, res3]) => {
           queuingNumber = res2.data.count;
           runningNumber = res3.data.count;
-          document.getElementById('cpu').onclick = (e) => changeType(e, queuingNumber, runningNumber);
-          document.getElementById('gpu').onclick = (e) => changeType(e, queuingNumber, runningNumber);
-        });
+          document.getElementById('cpu').onclick = (e)=>changeType(e,queuingNumber,runningNumber);
+          document.getElementById('gpu').onclick = (e)=>changeType(e,queuingNumber,runningNumber);
+
+        })
 
         super({ node: body });
       }
 
       onAfterAttach() {
         let inputs = this.node.getElementsByTagName('input');
-        console.log('sssss', inputs, name);
+        console.log('sssss',inputs, name);
         for (let inp of inputs as any) {
           if (inp.id !== 'monaco-job-name-input') {
             inp.className = 'env-radio';
@@ -673,6 +686,8 @@ const extension: JupyterLabPlugin<void> = {
         return ['notebook', undefined];
       }
 
+
+
     }
 
     /**
@@ -690,23 +705,25 @@ const extension: JupyterLabPlugin<void> = {
           let projectId = match[1];
           let projectType = match[2];
           let gpu_time_limit = 0;
+          let email_verified = false
           // let queuingNumber = 0;
           // let runningNumber = 0;
 
-          let a = getUserInfo({ user_ID });
+          let a = getUserInfo({ user_ID })
 
           // let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
           // get User queueing jobs
           // let c = getUserJobs({ projectId, projectType, status: 'Running' });
 
           Promise.all([a]).then(([res1]) => {
+            email_verified = res1.data.email_verified;
             gpu_time_limit = res1.data.gpu_time_limit || 0;
             // queuingNumber = res2.data.count;
             // runningNumber = res3.data.count;
             // console.log('gpu_time_limit...', gpu_time_limit);
             showDialog({
               title: 'Choose an environment to run your job:',
-              body: new SelectEnv(user_ID, gpu_time_limit, projectId, projectType),
+              body: new SelectEnv(user_ID, gpu_time_limit, projectId, projectType,email_verified),
               focusNodeSelector: 'input',
               buttons: [Dialog.cancelButton(), Dialog.okButton({ accept: true, label: 'CREATE' })],
             }).then(result => {
