@@ -697,6 +697,12 @@ const extension: JupyterLabPlugin<void> = {
       return new ToolbarButton({
         className: TOOLBAR_RUN_CLASS,
         onClick: () => {
+          const { commands } = app;
+          const options = {
+            path: context.path,
+            options: { mode: 'split-right' },
+          };
+          commands.execute('docmanager:save', options);
           const user_ID = localStorage.getItem('user_ID');
           const hash = window.location.hash;
           const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
