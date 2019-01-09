@@ -206,7 +206,7 @@ export class MonacoWidget extends Widget {
 
     function createUrl(path: string, hubName: string): string {
       const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-      return normalizeUrl(`${protocol}://${webServer.replace('http://', '')}/hub_api/pyls/${hubName}${path}`);
+      return normalizeUrl(`${protocol}://${webServer.replace('http://', '')}/hub_api/pyls/${hubName}${path}`, {stripWWW: false});
     }
 
     function createWebSocket(url: string): WebSocket {
