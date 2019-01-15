@@ -771,7 +771,8 @@ const extension: JupyterLabPlugin<void> = {
                   {defaultMessage: 'Job creating...'}
                 ), 0);
                 createJob({
-                  projectId, type, scriptPath, env: result.value[0], displayName: result.value[1], onJson: () => {
+                  projectId, type, scriptPath, env: result.value[0], displayName: result.value[1], onJson: (res) => {
+                    console.log('res', res)
                     app.shell.activateById('jobs-manager');
                     message.success(
                       (window as any).intl.formatMessage(
