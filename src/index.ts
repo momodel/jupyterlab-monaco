@@ -766,11 +766,19 @@ const extension: JupyterLabPlugin<void> = {
                 const projectId = match[1];
                 const type = match[2];
                 const scriptPath = context.path;
-                const hide = message.loading('Job creating...', 0);
+                const hide = message.loading((window as any).intl.formatMessage(
+                  {id: 'notebook.job.creating'},
+                  {defaultMessage: 'Job creating...'}
+                ), 0);
                 createJob({
                   projectId, type, scriptPath, env: result.value[0], displayName: result.value[1], onJson: () => {
                     app.shell.activateById('jobs-manager');
-                    message.success('Job created');
+                    message.success(
+                      (window as any).intl.formatMessage(
+                        {id: 'notebook.job.created'},
+                        {defaultMessage: 'Job created.'}
+                      )
+                    );
                     hide();
                   },
                 });
