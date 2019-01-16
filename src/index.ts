@@ -773,13 +773,24 @@ const extension: JupyterLabPlugin<void> = {
                 createJob({
                   projectId, type, scriptPath, env: result.value[0], displayName: result.value[1], onJson: (res) => {
                     console.log('jobres', res)
-                    app.shell.activateById('jobs-manager');
-                    message.success(
-                      (window as any).intl.formatMessage(
-                        {id: 'notebook.job.created'},
-                        {defaultMessage: 'Job created.'}
-                      )
-                    );
+                    if(res['is_error']){
+                      message.error(
+                          (window as any).intl.formatMessage(
+                              {id: 'notebook.job.createdError'},
+                              {defaultMessage: 'Job error.'}
+                          )
+                      );
+                      app.shell.activateById('logs-manager');
+                    } else {
+                      message.success(
+                          (window as any).intl.formatMessage(
+                              {id: 'notebook.job.created'},
+                              {defaultMessage: 'Job created.'}
+                          )
+                      );
+                      app.shell.activateById('jobs-manager');
+                    }
+
                     hide();
                   },
                 });
