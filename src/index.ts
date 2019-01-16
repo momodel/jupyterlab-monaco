@@ -772,7 +772,7 @@ const extension: JupyterLabPlugin<void> = {
                 ), 0);
                 createJob({
                   projectId, type, scriptPath, env: result.value[0], displayName: result.value[1], onJson: (res) => {
-                    console.log('res', res)
+                    console.log('jobres', res)
                     app.shell.activateById('jobs-manager');
                     message.success(
                       (window as any).intl.formatMessage(
