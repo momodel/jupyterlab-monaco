@@ -91,6 +91,7 @@ import { createJob, getUserInfo, getUserJobs } from './services';
  * The class name added to toolbar run button.
  */
 const TOOLBAR_RUN_CLASS = 'jp-RunIcon';
+// const TOOLBAR_GPU_RUN_CLASS = 'jp-GPURunIcon';
 
 let URLS: { [key: string]: string } = {
   css: monacoCSS,
@@ -549,7 +550,7 @@ const extension: JupyterLabPlugin<void> = {
     }
 
     class SelectEnv extends Widget {
-      constructor(user_ID, gpu_time_limit,projectId, projectType,email_verified) {
+      constructor(user_ID, gpu_time_limit,projectId, projectType,email_verified, gpuFirst) {
         let body = document.createElement('div');
         let nameDiv = document.createElement('div');
         let nameInput = document.createElement('input');
@@ -610,6 +611,9 @@ const extension: JupyterLabPlugin<void> = {
         if (gpu_time_limit < 0 || !email_verified) {
           input.disabled = true;
         }
+        if(gpu_time_limit > 0 && email_verified && gpuFirst){
+          input.checked = true;
+        }
         div1.style.display = 'flex';
         div1.style.alignItems = 'center';
         div1.style.padding = '5px 5px';
@@ -639,11 +643,13 @@ const extension: JupyterLabPlugin<void> = {
         let notice = document.createElement('div');
         notice.textContent = ``;
         notice.id = 'Notice';
+        if(gpu_time_limit > 0 && email_verified && gpuFirst){
+          notice.textContent=`Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`
+        }
         div3.style.padding = '5px 5px';
         div3.style.color = 'grey';
         div3.appendChild(notice);
         body.appendChild(div3);
-
 
         let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
         // get User queueing jobs
@@ -654,9 +660,7 @@ const extension: JupyterLabPlugin<void> = {
           runningNumber = res3.data.count;
           document.getElementById('cpu').onclick = (e)=>changeType(e,queuingNumber,runningNumber);
           document.getElementById('gpu').onclick = (e)=>changeType(e,queuingNumber,runningNumber);
-
         })
-
         super({ node: body });
       }
 
@@ -685,9 +689,6 @@ const extension: JupyterLabPlugin<void> = {
         }
         return ['notebook', undefined];
       }
-
-
-
     }
 
     /**
@@ -729,7 +730,7 @@ const extension: JupyterLabPlugin<void> = {
             // console.log('gpu_time_limit...', gpu_time_limit);
             showDialog({
               title: 'Choose an environment to run your job:',
-              body: new SelectEnv(user_ID, gpu_time_limit, projectId, projectType,email_verified),
+              body: new SelectEnv(user_ID, gpu_time_limit, projectId, projectType,email_verified,false),
               focusNodeSelector: 'input',
               buttons: [Dialog.cancelButton(), Dialog.okButton({ accept: true, label: 'CREATE' })],
             }).then(result => {
@@ -803,6 +804,121 @@ const extension: JupyterLabPlugin<void> = {
       });
     }
 
+
+
+    // /**
+    //  * Create a toExecutable toolbar item.
+    //  */
+    // function createGpuRunButton(context: DocumentRegistry.CodeContext): ToolbarButton {
+    //   return new ToolbarButton({
+    //     className: TOOLBAR_GPU_RUN_CLASS,
+    //     onClick: () => {
+    //       const { commands } = app;
+    //       const options = {
+    //         path: context.path,
+    //         options: { mode: 'split-right' },
+    //       };
+    //       commands.execute('docmanager:save', options);
+    //       const user_ID = localStorage.getItem('user_ID');
+    //       const hash = window.location.hash;
+    //       const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
+    //       // console.log('user_ID...', user_ID);
+    //
+    //       let projectId = match[1];
+    //       let projectType = match[2];
+    //       let gpu_time_limit = 0;
+    //       let email_verified = false
+    //       // let queuingNumber = 0;
+    //       // let runningNumber = 0;
+    //
+    //       let a = getUserInfo({ user_ID })
+    //
+    //       // let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
+    //       // get User queueing jobs
+    //       // let c = getUserJobs({ projectId, projectType, status: 'Running' });
+    //
+    //       Promise.all([a]).then(([res1]) => {
+    //         email_verified = res1.data.email_verified;
+    //         gpu_time_limit = res1.data.gpu_time_limit || 0;
+    //         // queuingNumber = res2.data.count;
+    //         // runningNumber = res3.data.count;
+    //         // console.log('gpu_time_limit...', gpu_time_limit);
+    //         showDialog({
+    //           title: 'Choose an environment to run your job:',
+    //           body: new SelectEnv(user_ID, gpu_time_limit, projectId, projectType,email_verified, true),
+    //           focusNodeSelector: 'input',
+    //           buttons: [Dialog.cancelButton(), Dialog.okButton({ accept: true, label: 'CREATE' })],
+    //         }).then(result => {
+    //           if (result.button.label === 'CANCEL') {
+    //             return;
+    //           }
+    //           if (!result.value) {
+    //             return null;
+    //           }
+    //           if (result.value[0] === 'notebook') {
+    //             const options = {
+    //               name: `Run: ${result.value[1] ? result.value[1] : 'Python'}`,
+    //               path: context.path,
+    //               preferredLanguage: context.model.defaultKernelLanguage,
+    //               kernelPreference: { name: 'python3' },
+    //               insertMode: 'split-bottom',
+    //             };
+    //             openConsole(options)
+    //               .then((consolePanel) => {
+    //                 const { console: currentConsole } = consolePanel;
+    //                 let promptCell = currentConsole.promptCell;
+    //                 if (!promptCell) {
+    //                   return;
+    //                 }
+    //                 let model = promptCell.model;
+    //                 model.value.text = `!python ${context.contentsModel.name}`;
+    //                 currentConsole.execute(true);
+    //               });
+    //             return;
+    //           }
+    //           const hash = window.location.hash;
+    //           const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
+    //           if (match) {
+    //             const projectId = match[1];
+    //             const type = match[2];
+    //             const scriptPath = context.path;
+    //             const hide = message.loading((window as any).intl.formatMessage(
+    //               {id: 'notebook.job.creating'},
+    //               {defaultMessage: 'Job creating...'}
+    //             ), 0);
+    //             createJob({
+    //               projectId, type, scriptPath, env: result.value[0], displayName: result.value[1], onJson: (res) => {
+    //                 // console.log('jobres', res)
+    //                 if(res['is_error']){
+    //                   message.error(
+    //                     (window as any).intl.formatMessage(
+    //                       {id: 'notebook.job.createdError'},
+    //                       {defaultMessage: 'Job error.'}
+    //                     )
+    //                   );
+    //                   app.shell.activateById('logs-manager');
+    //                 } else {
+    //                   message.success(
+    //                     (window as any).intl.formatMessage(
+    //                       {id: 'notebook.job.created'},
+    //                       {defaultMessage: 'Job created.'}
+    //                     )
+    //                   );
+    //                   app.shell.activateById('jobs-manager');
+    //                 }
+    //
+    //                 hide();
+    //               },
+    //             });
+    //           }
+    //         });
+    //       });
+    //       // console.log('gpu_time_limit111...', gpu_time_limit);
+    //     },
+    //     tooltip: 'Create GPU Job',
+    //   });
+    // }
+
     /**
      * A document widget for editors.
      */
@@ -835,6 +951,7 @@ const extension: JupyterLabPlugin<void> = {
           if (ext === 'py') {
             // toolbar.addItem('Run', createRunButton(context));
             toolbar.addItem('Create Job', createLongRunButton(context));
+            toolbar.addItem('Create GPU Job', createGpuRunButton(context));
           }
           if (ext === 'md') {
             toolbar.addItem('Markdown Preview', createMDButton(context));
