@@ -706,7 +706,7 @@ const extension: JupyterLabPlugin<void> = {
           commands.execute('docmanager:save', options);
           const user_ID = localStorage.getItem('user_ID');
           const hash = window.location.hash;
-          const match = pathToRegexp('#/workspace/:projectId/:type?').exec(hash);
+          const match = pathToRegexp('#/workspace/:projectId/:type?:classroom').exec(hash);
           // console.log('user_ID...', user_ID);
 
           let projectId = match[1];
