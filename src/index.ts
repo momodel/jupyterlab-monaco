@@ -951,7 +951,7 @@ const extension: JupyterLabPlugin<void> = {
           if (ext === 'py') {
             // toolbar.addItem('Run', createRunButton(context));
             toolbar.addItem('Create Job', createLongRunButton(context));
-            toolbar.addItem('Create GPU Job', createGpuRunButton(context));
+            // toolbar.addItem('Create GPU Job', createGpuRunButton(context));
           }
           if (ext === 'md') {
             toolbar.addItem('Markdown Preview', createMDButton(context));
