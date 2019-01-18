@@ -162,7 +162,7 @@ export class MonacoWidget extends Widget {
     const services = createMonacoServices(this.editor as any);
 
     const hash = window.location.hash;
-    const match = pathToRegexp('#/workspace/:appId/:type').exec(hash);
+    const match = pathToRegexp('#/workspace/:appId/:type/:classroom').exec(hash);
     request(`pyapi/project/hub_name/${match[1]}`,
       undefined,
       {
@@ -493,7 +493,7 @@ const extension: JupyterLabPlugin<void> = {
      */
     function createCollabButton(context: DocumentRegistry.CodeContext): ToolbarButton {
       const hash = window.location.hash;
-      const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
+      const match = pathToRegexp('#/workspace/:projectId/:type/:classroom').exec(hash);
       // this._text = new ToolbarButton({
       //   className: 'jp-CollaborationIcon',
       // });
@@ -706,7 +706,7 @@ const extension: JupyterLabPlugin<void> = {
           commands.execute('docmanager:save', options);
           const user_ID = localStorage.getItem('user_ID');
           const hash = window.location.hash;
-          const match = pathToRegexp('#/workspace/:projectId/:type?:classroom').exec(hash);
+          const match = pathToRegexp('#/workspace/:projectId/:type/:classroom').exec(hash);
           // console.log('user_ID...', user_ID);
 
           let projectId = match[1];
