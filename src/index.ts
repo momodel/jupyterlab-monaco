@@ -644,7 +644,7 @@ const extension: JupyterLabPlugin<void> = {
         notice.textContent = ``;
         notice.id = 'Notice';
         if(gpu_time_limit > 0 && email_verified && gpuFirst){
-          notice.textContent=`Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`
+          notice.textContent = `Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`
         }
         div3.style.padding = '5px 5px';
         div3.style.color = 'grey';
@@ -706,7 +706,7 @@ const extension: JupyterLabPlugin<void> = {
           commands.execute('docmanager:save', options);
           const user_ID = localStorage.getItem('user_ID');
           const hash = window.location.hash;
-          const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
+          const match = pathToRegexp('#/workspace/:projectId/:type?').exec(hash);
           // console.log('user_ID...', user_ID);
 
           let projectId = match[1];
