@@ -207,7 +207,7 @@ export class MonacoWidget extends Widget {
 
     function createUrl(path: string, hubName: string): string {
       const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-      return normalizeUrl(`${protocol}://${webServer.replace('http://', '')}/hub_api/pyls/${hubName}${path}`, {stripWWW: false});
+      return normalizeUrl(`${protocol}://${webServer.replace('http://', '')}/hub_api/pyls/${hubName}${path}`, { stripWWW: false });
     }
 
     function createWebSocket(url: string): WebSocket {
@@ -537,26 +537,24 @@ const extension: JupyterLabPlugin<void> = {
       return button;
     }
 
-
-    function changeType(e,queuingNumber,runningNumber){
-      if (e.target.value==='notebook'){
-        document.getElementById('Notice').innerText=``
-      }
-      else if(e.target.value==='cpu')
-        document.getElementById('Notice').innerText=`Notice: You have ${runningNumber} jobs are running.`
-      else if(e.target.value==='gpu'){
-        document.getElementById('Notice').innerText=`Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`
+    function changeType(e, queuingNumber, runningNumber) {
+      if (e.target.value === 'notebook') {
+        document.getElementById('Notice').innerText = ``;
+      } else if (e.target.value === 'cpu')
+        document.getElementById('Notice').innerText = `Notice: You have ${runningNumber} jobs are running.`;
+      else if (e.target.value === 'gpu') {
+        document.getElementById('Notice').innerText = `Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`;
       }
     }
 
     class SelectEnv extends Widget {
-      constructor(user_ID, gpu_time_limit,projectId, projectType,email_verified, gpuFirst) {
+      constructor(user_ID, gpu_time_limit, projectId, projectType, email_verified, gpuFirst) {
         let body = document.createElement('div');
         let nameDiv = document.createElement('div');
         let nameInput = document.createElement('input');
 
-        let queuingNumber = 0
-        let runningNumber = 0
+        let queuingNumber = 0;
+        let runningNumber = 0;
 
         nameInput.className = 'monaco-job-name-input';
         nameInput.placeholder = '(Optional) Enter job name';
@@ -564,6 +562,16 @@ const extension: JupyterLabPlugin<void> = {
         nameInput.style.marginBottom = '10px';
         nameDiv.appendChild(nameInput);
         body.appendChild(nameDiv);
+
+        let argsDiv = document.createElement('div');
+        let argsInput = document.createElement('input');
+        argsInput.className = 'monaco-job-args-input';
+        argsInput.placeholder = '(Optional) Enter python arguments';
+        argsInput.id = 'monaco-job-args-input';
+        argsInput.style.marginBottom = '10px';
+        argsDiv.appendChild(argsInput);
+        body.appendChild(argsDiv);
+
         // let envLabel = document.createElement('h3');
         // envLabel.textContent = 'Choose running env: ';
         // body.appendChild(envLabel);
@@ -584,7 +592,7 @@ const extension: JupyterLabPlugin<void> = {
           input.id = value;
           input.style.marginRight = '10px';
           input.type = 'radio';
-          input.onclick = (e)=>changeType(e,queuingNumber,runningNumber);
+          input.onclick = (e) => changeType(e, queuingNumber, runningNumber);
           div.style.display = 'flex';
           div.style.alignItems = 'center';
           div.style.padding = '5px 5px';
@@ -607,11 +615,11 @@ const extension: JupyterLabPlugin<void> = {
         input.id = 'gpu';
         input.style.marginRight = '10px';
         input.type = 'radio';
-        input.onclick = (e)=>changeType(e,queuingNumber,runningNumber);
+        input.onclick = (e) => changeType(e, queuingNumber, runningNumber);
         if (gpu_time_limit < 0 || !email_verified) {
           input.disabled = true;
         }
-        if(gpu_time_limit > 0 && email_verified && gpuFirst){
+        if (gpu_time_limit > 0 && email_verified && gpuFirst) {
           input.checked = true;
         }
         div1.style.display = 'flex';
@@ -622,17 +630,15 @@ const extension: JupyterLabPlugin<void> = {
         body.appendChild(div1);
         let div2 = document.createElement('div');
         let invite = document.createElement('a');
-        if (email_verified){
+        if (email_verified) {
           invite.textContent = `邀请好友获得更多免费GPU使用时间`;
           invite.href = `/#/event`;
           invite.target = '_blank';
-        }
-        else{
+        } else {
           invite.textContent = `激活邮箱以获得 GPU 使用权限`;
           invite.href = `/#/setting/profile/${user_ID}`;
           invite.target = '_blank';
         }
-
 
         div2.style.display = 'flex';
         div2.style.alignItems = 'center';
@@ -643,8 +649,8 @@ const extension: JupyterLabPlugin<void> = {
         let notice = document.createElement('div');
         notice.textContent = ``;
         notice.id = 'Notice';
-        if(gpu_time_limit > 0 && email_verified && gpuFirst){
-          notice.textContent = `Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`
+        if (gpu_time_limit > 0 && email_verified && gpuFirst) {
+          notice.textContent = `Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`;
         }
         div3.style.padding = '5px 5px';
         div3.style.color = 'grey';
@@ -658,17 +664,17 @@ const extension: JupyterLabPlugin<void> = {
         Promise.all([b, c]).then(([res2, res3]) => {
           queuingNumber = res2.data.count;
           runningNumber = res3.data.count;
-          document.getElementById('cpu').onclick = (e)=>changeType(e,queuingNumber,runningNumber);
-          document.getElementById('gpu').onclick = (e)=>changeType(e,queuingNumber,runningNumber);
-        })
+          document.getElementById('cpu').onclick = (e) => changeType(e, queuingNumber, runningNumber);
+          document.getElementById('gpu').onclick = (e) => changeType(e, queuingNumber, runningNumber);
+        });
         super({ node: body });
       }
 
       onAfterAttach() {
         let inputs = this.node.getElementsByTagName('input');
-        console.log('sssss',inputs, name);
+        // console.log('sssss', inputs, name);
         for (let inp of inputs as any) {
-          if (inp.id !== 'monaco-job-name-input') {
+          if (!['monaco-job-name-input', 'monaco-job-args-input'].includes(inp.id)) {
             inp.className = 'env-radio';
           }
         }
@@ -680,11 +686,12 @@ const extension: JupyterLabPlugin<void> = {
       getValue(): string[] {
         let inputs = this.node.getElementsByTagName('input');
         const name = (document.getElementById('monaco-job-name-input') as HTMLInputElement).value;
+        const args = (document.getElementById('monaco-job-args-input') as HTMLInputElement).value;
         console.log(inputs, name);
 
         for (let inp of inputs as any) {
           if (inp.checked) {
-            return [inp.value, name];
+            return [inp.value, name, args];
           }
         }
         return ['notebook', undefined];
@@ -712,11 +719,11 @@ const extension: JupyterLabPlugin<void> = {
           let projectId = match[1];
           let projectType = match[2];
           let gpu_time_limit = 0;
-          let email_verified = false
+          let email_verified = false;
           // let queuingNumber = 0;
           // let runningNumber = 0;
 
-          let a = getUserInfo({ user_ID })
+          let a = getUserInfo({ user_ID });
 
           // let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
           // get User queueing jobs
@@ -730,7 +737,7 @@ const extension: JupyterLabPlugin<void> = {
             // console.log('gpu_time_limit...', gpu_time_limit);
             showDialog({
               title: 'Choose an environment to run your job:',
-              body: new SelectEnv(user_ID, gpu_time_limit, projectId, projectType,email_verified,false),
+              body: new SelectEnv(user_ID, gpu_time_limit, projectId, projectType, email_verified, false),
               focusNodeSelector: 'input',
               buttons: [Dialog.cancelButton(), Dialog.okButton({ accept: true, label: 'CREATE' })],
             }).then(result => {
@@ -756,7 +763,7 @@ const extension: JupyterLabPlugin<void> = {
                       return;
                     }
                     let model = promptCell.model;
-                    model.value.text = `!python ${context.contentsModel.name}`;
+                    model.value.text = `!python ${context.contentsModel.name} ${result.value[2]}`;
                     currentConsole.execute(true);
                   });
                 return;
@@ -768,26 +775,27 @@ const extension: JupyterLabPlugin<void> = {
                 const type = match[2];
                 const scriptPath = context.path;
                 const hide = message.loading((window as any).intl.formatMessage(
-                  {id: 'notebook.job.creating'},
-                  {defaultMessage: 'Job creating...'}
+                  { id: 'notebook.job.creating' },
+                  { defaultMessage: 'Job creating...' },
                 ), 0);
                 createJob({
-                  projectId, type, scriptPath, env: result.value[0], displayName: result.value[1], onJson: (res) => {
-                    console.log('jobres', res)
-                    if(res['is_error']){
+                  projectId, type, scriptPath, env: result.value[0], displayName: result.value[1],
+                  args: result.value[2], onJson: (res) => {
+                    console.log('jobres', res);
+                    if (res['is_error']) {
                       message.error(
-                          (window as any).intl.formatMessage(
-                              {id: 'notebook.job.createdError'},
-                              {defaultMessage: 'Job error.'}
-                          )
+                        (window as any).intl.formatMessage(
+                          { id: 'notebook.job.createdError' },
+                          { defaultMessage: 'Job error.' },
+                        ),
                       );
                       app.shell.activateById('logs-manager');
                     } else {
                       message.success(
-                          (window as any).intl.formatMessage(
-                              {id: 'notebook.job.created'},
-                              {defaultMessage: 'Job created.'}
-                          )
+                        (window as any).intl.formatMessage(
+                          { id: 'notebook.job.created' },
+                          { defaultMessage: 'Job created.' },
+                        ),
                       );
                       app.shell.activateById('jobs-manager');
                     }
@@ -803,8 +811,6 @@ const extension: JupyterLabPlugin<void> = {
         tooltip: 'Create Job',
       });
     }
-
-
 
     // /**
     //  * Create a toExecutable toolbar item.
