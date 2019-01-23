@@ -22,3 +22,7 @@
 .monaco-job-name-input {
     width: 250px;
 }
+
+.monaco-job-args-input {
+    width: 280px;
+}
