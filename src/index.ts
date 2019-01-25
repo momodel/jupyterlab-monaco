@@ -49,7 +49,8 @@ import {
 import {
   Message,
 } from '@phosphor/messaging';
-import { message, Modal } from 'antd';
+import {  Modal } from 'antd';
+// import { message, Modal } from 'antd';
 
 // import * as _ from 'lodash';
 // var algorithm_1 = require("@phosphor/algorithm");
@@ -85,7 +86,8 @@ import * as monacoTS
 // @ts-ignore: error TS2307: Cannot find module
   from 'file-loader?name=[path][name].[ext]!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-ts.worker.bundle.js';
 
-import { createJob, getUserInfo, getUserJobs } from './services';
+import {  getUserInfo, getUserJobs } from './services';
+// import { createJob, getUserInfo, getUserJobs } from './services';
 
 /**
  * The class name added to toolbar run button.
@@ -771,38 +773,50 @@ const extension: JupyterLabPlugin<void> = {
               const hash = window.location.hash;
               const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
               if (match) {
+
                 const projectId = match[1];
                 const type = match[2];
                 const scriptPath = context.path;
-                const hide = message.loading((window as any).intl.formatMessage(
-                  { id: 'notebook.job.creating' },
-                  { defaultMessage: 'Job creating...' },
-                ), 0);
-                createJob({
-                  projectId, type, scriptPath, env: result.value[0], displayName: result.value[1],
-                  args: result.value[2], onJson: (res) => {
-                    console.log('jobres', res);
-                    if (res['is_error']) {
-                      message.error(
-                        (window as any).intl.formatMessage(
-                          { id: 'notebook.job.createdError' },
-                          { defaultMessage: 'Job error.' },
-                        ),
-                      );
-                      app.shell.activateById('logs-manager');
-                    } else {
-                      message.success(
-                        (window as any).intl.formatMessage(
-                          { id: 'notebook.job.created' },
-                          { defaultMessage: 'Job created.' },
-                        ),
-                      );
-                      app.shell.activateById('jobs-manager');
-                    }
-
-                    hide();
-                  },
-                });
+                // const hide = message.loading((window as any).intl.formatMessage(
+                //   { id: 'notebook.job.creating' },
+                //   { defaultMessage: 'Job creating...' },
+                // ), 0);
+                console.log('你是不是走这里')
+                let event = new CustomEvent('jobTest', { detail: {
+                    projectId: projectId,
+                    type: type,
+                    scriptPath: scriptPath,
+                    env: result.value[0],
+                    displayName: result.value[1],
+                    args: result.value[2]
+                  } })
+                window.dispatchEvent(event)
+                return
+                // createJob({
+                //   projectId, type, scriptPath, env: result.value[0], displayName: result.value[1],
+                //   args: result.value[2], onJson: (res) => {
+                //     console.log('jobres', res);
+                //     if (res['is_error']) {
+                //       message.error(
+                //         (window as any).intl.formatMessage(
+                //           { id: 'notebook.job.createdError' },
+                //           { defaultMessage: 'Job error.' },
+                //         ),
+                //       );
+                //       app.shell.activateById('logs-manager');
+                //     } else {
+                //       message.success(
+                //         (window as any).intl.formatMessage(
+                //           { id: 'notebook.job.created' },
+                //           { defaultMessage: 'Job created.' },
+                //         ),
+                //       );
+                //       app.shell.activateById('jobs-manager');
+                //     }
+                //
+                //     hide();
+                //   },
+                // });
               }
             });
           });
