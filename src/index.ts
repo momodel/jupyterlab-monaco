@@ -15,7 +15,8 @@ import {
 } from '@jupyterlab/application';
 
 import {
-  ICommandPalette, showDialog, Dialog,
+  ICommandPalette,
+  // showDialog, Dialog,
 } from '@jupyterlab/apputils';
 
 import {
@@ -86,7 +87,7 @@ import * as monacoTS
 // @ts-ignore: error TS2307: Cannot find module
   from 'file-loader?name=[path][name].[ext]!../lib/JUPYTERLAB_FILE_LOADER_jupyterlab-monaco-ts.worker.bundle.js';
 
-import {  getUserInfo, getUserJobs } from './services';
+// import {getUserInfo, getUserJobs} from './services';
 // import { createJob, getUserInfo, getUserJobs } from './services';
 
 /**
@@ -103,13 +104,15 @@ let URLS: { [key: string]: string } = {
   typescript: monacoTS,
 };
 
+
 (self as any).MonacoEnvironment = {
   getWorkerUrl: function (moduleId: string, label: string): string {
     let url = URLS[label] || monacoEditor;
     return url;
   },
 };
-
+let openEvent = null
+let eventNum = 0
 // register Monaco languages
 monaco.languages.register({
   id: 'python',
@@ -338,6 +341,7 @@ const extension: JupyterLabPlugin<void> = {
     // const manager = app.serviceManager;
     // const { commands } = app;
     // const tracker = new InstanceTracker<ConsolePanel>({ namespace: 'console' });
+    console.log('每次2')
 
     function openConsole(args: Partial<ConsolePanel.IOptions>) {
       const manager = app.serviceManager;
@@ -539,170 +543,171 @@ const extension: JupyterLabPlugin<void> = {
       return button;
     }
 
-    function changeType(e, queuingNumber, runningNumber) {
-      if (e.target.value === 'notebook') {
-        document.getElementById('Notice').innerText = ``;
-      } else if (e.target.value === 'cpu')
-        document.getElementById('Notice').innerText = `Notice: You have ${runningNumber} jobs are running.`;
-      else if (e.target.value === 'gpu') {
-        document.getElementById('Notice').innerText = `Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`;
-      }
-    }
+    // function changeType(e, queuingNumber, runningNumber) {
+    //   if (e.target.value === 'notebook') {
+    //     document.getElementById('Notice').innerText = ``;
+    //   } else if (e.target.value === 'cpu')
+    //     document.getElementById('Notice').innerText = `Notice: You have ${runningNumber} jobs are running.`;
+    //   else if (e.target.value === 'gpu') {
+    //     document.getElementById('Notice').innerText = `Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`;
+    //   }
+    // }
 
-    class SelectEnv extends Widget {
-      constructor(user_ID, gpu_time_limit, projectId, projectType, email_verified, gpuFirst) {
-        let body = document.createElement('div');
-        let nameDiv = document.createElement('div');
-        let nameInput = document.createElement('input');
-
-        let queuingNumber = 0;
-        let runningNumber = 0;
-
-        nameInput.className = 'monaco-job-name-input';
-        nameInput.placeholder = '(Optional) Enter job name';
-        nameInput.id = 'monaco-job-name-input';
-        nameInput.style.marginBottom = '10px';
-        nameDiv.appendChild(nameInput);
-        body.appendChild(nameDiv);
-
-        let argsDiv = document.createElement('div');
-        let argsInput = document.createElement('input');
-        argsInput.className = 'monaco-job-args-input';
-        argsInput.placeholder = '(Optional) Enter python arguments';
-        argsInput.id = 'monaco-job-args-input';
-        argsInput.style.marginBottom = '10px';
-        argsDiv.appendChild(argsInput);
-        body.appendChild(argsDiv);
-
-        // let envLabel = document.createElement('h3');
-        // envLabel.textContent = 'Choose running env: ';
-        // body.appendChild(envLabel);
-
-        [['notebook', 'Notebook Console'],
-          ['cpu', 'CPU Only Machines']].forEach(([value, label]) => {
-          let div = document.createElement('div');
-          let existingLabel = document.createElement('label');
-          existingLabel.textContent = label;
-          existingLabel.htmlFor = value;
-          let input = document.createElement('input');
-          if (value === 'notebook') {
-            input.checked = true;
-          }
-          input.value = value;
-          input.name = 'env-radio';
-          input.className = 'env-radio';
-          input.id = value;
-          input.style.marginRight = '10px';
-          input.type = 'radio';
-          input.onclick = (e) => changeType(e, queuingNumber, runningNumber);
-          div.style.display = 'flex';
-          div.style.alignItems = 'center';
-          div.style.padding = '5px 5px';
-          div.appendChild(input);
-          div.appendChild(existingLabel);
-          body.appendChild(div);
-        });
-
-        const gpu_hour = gpu_time_limit ? Math.floor(gpu_time_limit / 3600) : 0;
-        const gpu_minutes = gpu_time_limit ? Math.round((gpu_time_limit - gpu_hour * 3600) / 60) : 0;
-
-        let div1 = document.createElement('div');
-        let existingLabel = document.createElement('label');
-        existingLabel.textContent = `GPU Powered Machines (剩余 ${gpu_hour} 小时, ${gpu_minutes} 分钟)`;
-        existingLabel.htmlFor = 'gpu';
-        let input = document.createElement('input');
-        input.value = 'gpu';
-        input.name = 'env-radio';
-        input.className = 'env-radio';
-        input.id = 'gpu';
-        input.style.marginRight = '10px';
-        input.type = 'radio';
-        input.onclick = (e) => changeType(e, queuingNumber, runningNumber);
-        if (gpu_time_limit < 0 || !email_verified) {
-          input.disabled = true;
-        }
-        if (gpu_time_limit > 0 && email_verified && gpuFirst) {
-          input.checked = true;
-        }
-        div1.style.display = 'flex';
-        div1.style.alignItems = 'center';
-        div1.style.padding = '5px 5px';
-        div1.appendChild(input);
-        div1.appendChild(existingLabel);
-        body.appendChild(div1);
-        let div2 = document.createElement('div');
-        let invite = document.createElement('a');
-        if (email_verified) {
-          invite.textContent = `邀请好友获得更多免费GPU使用时间`;
-          invite.href = `/#/event`;
-          invite.target = '_blank';
-        } else {
-          invite.textContent = `激活邮箱以获得 GPU 使用权限`;
-          invite.href = `/#/setting/profile/${user_ID}`;
-          invite.target = '_blank';
-        }
-
-        div2.style.display = 'flex';
-        div2.style.alignItems = 'center';
-        div2.style.padding = '5px 5px 5px 28px';
-        div2.appendChild(invite);
-        body.appendChild(div2);
-        let div3 = document.createElement('div');
-        let notice = document.createElement('div');
-        notice.textContent = ``;
-        notice.id = 'Notice';
-        if (gpu_time_limit > 0 && email_verified && gpuFirst) {
-          notice.textContent = `Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`;
-        }
-        div3.style.padding = '5px 5px';
-        div3.style.color = 'grey';
-        div3.appendChild(notice);
-        body.appendChild(div3);
-
-        let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
-        // get User queueing jobs
-        let c = getUserJobs({ projectId, projectType, status: 'Running' });
-
-        Promise.all([b, c]).then(([res2, res3]) => {
-          queuingNumber = res2.data.count;
-          runningNumber = res3.data.count;
-          document.getElementById('cpu').onclick = (e) => changeType(e, queuingNumber, runningNumber);
-          document.getElementById('gpu').onclick = (e) => changeType(e, queuingNumber, runningNumber);
-        });
-        super({ node: body });
-      }
-
-      onAfterAttach() {
-        let inputs = this.node.getElementsByTagName('input');
-        // console.log('sssss', inputs, name);
-        for (let inp of inputs as any) {
-          if (!['monaco-job-name-input', 'monaco-job-args-input'].includes(inp.id)) {
-            inp.className = 'env-radio';
-          }
-        }
-        // inputs.forEach((inp) => {
-        //   inp.className = '';
-        // });
-      }
-
-      getValue(): string[] {
-        let inputs = this.node.getElementsByTagName('input');
-        const name = (document.getElementById('monaco-job-name-input') as HTMLInputElement).value;
-        const args = (document.getElementById('monaco-job-args-input') as HTMLInputElement).value;
-        console.log(inputs, name);
-
-        for (let inp of inputs as any) {
-          if (inp.checked) {
-            return [inp.value, name, args];
-          }
-        }
-        return ['notebook', undefined];
-      }
-    }
+    // class SelectEnv extends Widget {
+    //   constructor(user_ID, gpu_time_limit, projectId, projectType, email_verified, gpuFirst) {
+    //     let body = document.createElement('div');
+    //     let nameDiv = document.createElement('div');
+    //     let nameInput = document.createElement('input');
+    //
+    //     let queuingNumber = 0;
+    //     let runningNumber = 0;
+    //
+    //     nameInput.className = 'monaco-job-name-input';
+    //     nameInput.placeholder = '(Optional) Enter job name';
+    //     nameInput.id = 'monaco-job-name-input';
+    //     nameInput.style.marginBottom = '10px';
+    //     nameDiv.appendChild(nameInput);
+    //     body.appendChild(nameDiv);
+    //
+    //     let argsDiv = document.createElement('div');
+    //     let argsInput = document.createElement('input');
+    //     argsInput.className = 'monaco-job-args-input';
+    //     argsInput.placeholder = '(Optional) Enter python arguments';
+    //     argsInput.id = 'monaco-job-args-input';
+    //     argsInput.style.marginBottom = '10px';
+    //     argsDiv.appendChild(argsInput);
+    //     body.appendChild(argsDiv);
+    //
+    //     // let envLabel = document.createElement('h3');
+    //     // envLabel.textContent = 'Choose running env: ';
+    //     // body.appendChild(envLabel);
+    //
+    //     [['notebook', 'Notebook Console'],
+    //       ['cpu', 'CPU Only Machines']].forEach(([value, label]) => {
+    //       let div = document.createElement('div');
+    //       let existingLabel = document.createElement('label');
+    //       existingLabel.textContent = label;
+    //       existingLabel.htmlFor = value;
+    //       let input = document.createElement('input');
+    //       if (value === 'notebook') {
+    //         input.checked = true;
+    //       }
+    //       input.value = value;
+    //       input.name = 'env-radio';
+    //       input.className = 'env-radio';
+    //       input.id = value;
+    //       input.style.marginRight = '10px';
+    //       input.type = 'radio';
+    //       input.onclick = (e) => changeType(e, queuingNumber, runningNumber);
+    //       div.style.display = 'flex';
+    //       div.style.alignItems = 'center';
+    //       div.style.padding = '5px 5px';
+    //       div.appendChild(input);
+    //       div.appendChild(existingLabel);
+    //       body.appendChild(div);
+    //     });
+    //
+    //     const gpu_hour = gpu_time_limit ? Math.floor(gpu_time_limit / 3600) : 0;
+    //     const gpu_minutes = gpu_time_limit ? Math.round((gpu_time_limit - gpu_hour * 3600) / 60) : 0;
+    //
+    //     let div1 = document.createElement('div');
+    //     let existingLabel = document.createElement('label');
+    //     existingLabel.textContent = `GPU Powered Machines (剩余 ${gpu_hour} 小时, ${gpu_minutes} 分钟)`;
+    //     existingLabel.htmlFor = 'gpu';
+    //     let input = document.createElement('input');
+    //     input.value = 'gpu';
+    //     input.name = 'env-radio';
+    //     input.className = 'env-radio';
+    //     input.id = 'gpu';
+    //     input.style.marginRight = '10px';
+    //     input.type = 'radio';
+    //     input.onclick = (e) => changeType(e, queuingNumber, runningNumber);
+    //     if (gpu_time_limit < 0 || !email_verified) {
+    //       input.disabled = true;
+    //     }
+    //     if (gpu_time_limit > 0 && email_verified && gpuFirst) {
+    //       input.checked = true;
+    //     }
+    //     div1.style.display = 'flex';
+    //     div1.style.alignItems = 'center';
+    //     div1.style.padding = '5px 5px';
+    //     div1.appendChild(input);
+    //     div1.appendChild(existingLabel);
+    //     body.appendChild(div1);
+    //     let div2 = document.createElement('div');
+    //     let invite = document.createElement('a');
+    //     if (email_verified) {
+    //       invite.textContent = `邀请好友获得更多免费GPU使用时间`;
+    //       invite.href = `/#/event`;
+    //       invite.target = '_blank';
+    //     } else {
+    //       invite.textContent = `激活邮箱以获得 GPU 使用权限`;
+    //       invite.href = `/#/setting/profile/${user_ID}`;
+    //       invite.target = '_blank';
+    //     }
+    //
+    //     div2.style.display = 'flex';
+    //     div2.style.alignItems = 'center';
+    //     div2.style.padding = '5px 5px 5px 28px';
+    //     div2.appendChild(invite);
+    //     body.appendChild(div2);
+    //     let div3 = document.createElement('div');
+    //     let notice = document.createElement('div');
+    //     notice.textContent = ``;
+    //     notice.id = 'Notice';
+    //     if (gpu_time_limit > 0 && email_verified && gpuFirst) {
+    //       notice.textContent = `Notice: You have ${queuingNumber} jobs are queuing,  ${runningNumber} jobs are running.`;
+    //     }
+    //     div3.style.padding = '5px 5px';
+    //     div3.style.color = 'grey';
+    //     div3.appendChild(notice);
+    //     body.appendChild(div3);
+    //
+    //     let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
+    //     // get User queueing jobs
+    //     let c = getUserJobs({ projectId, projectType, status: 'Running' });
+    //
+    //     Promise.all([b, c]).then(([res2, res3]) => {
+    //       queuingNumber = res2.data.count;
+    //       runningNumber = res3.data.count;
+    //       document.getElementById('cpu').onclick = (e) => changeType(e, queuingNumber, runningNumber);
+    //       document.getElementById('gpu').onclick = (e) => changeType(e, queuingNumber, runningNumber);
+    //     });
+    //     super({ node: body });
+    //   }
+    //
+    //   onAfterAttach() {
+    //     let inputs = this.node.getElementsByTagName('input');
+    //     // console.log('sssss', inputs, name);
+    //     for (let inp of inputs as any) {
+    //       if (!['monaco-job-name-input', 'monaco-job-args-input'].includes(inp.id)) {
+    //         inp.className = 'env-radio';
+    //       }
+    //     }
+    //     // inputs.forEach((inp) => {
+    //     //   inp.className = '';
+    //     // });
+    //   }
+    //
+    //   getValue(): string[] {
+    //     let inputs = this.node.getElementsByTagName('input');
+    //     const name = (document.getElementById('monaco-job-name-input') as HTMLInputElement).value;
+    //     const args = (document.getElementById('monaco-job-args-input') as HTMLInputElement).value;
+    //     console.log(inputs, name);
+    //
+    //     for (let inp of inputs as any) {
+    //       if (inp.checked) {
+    //         return [inp.value, name, args];
+    //       }
+    //     }
+    //     return ['notebook', undefined];
+    //   }
+    // }
 
     /**
      * Create a toExecutable toolbar item.
      */
+
     function createLongRunButton(context: DocumentRegistry.CodeContext): ToolbarButton {
       return new ToolbarButton({
         className: TOOLBAR_RUN_CLASS,
@@ -712,51 +717,21 @@ const extension: JupyterLabPlugin<void> = {
             path: context.path,
             options: { mode: 'split-right' },
           };
-          commands.execute('docmanager:save', options);
-          const user_ID = localStorage.getItem('user_ID');
-          const hash = window.location.hash;
-          const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
-          // console.log('user_ID...', user_ID);
-
-          let projectId = match[1];
-          let projectType = match[2];
-          let gpu_time_limit = 0;
-          let email_verified = false;
-          // let queuingNumber = 0;
-          // let runningNumber = 0;
-
-          let a = getUserInfo({ user_ID });
-
-          // let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
-          // get User queueing jobs
-          // let c = getUserJobs({ projectId, projectType, status: 'Running' });
-
-          Promise.all([a]).then(([res1]) => {
-            email_verified = res1.data.email_verified;
-            gpu_time_limit = res1.data.gpu_time_limit || 0;
-            // queuingNumber = res2.data.count;
-            // runningNumber = res3.data.count;
-            // console.log('gpu_time_limit...', gpu_time_limit);
-            showDialog({
-              title: 'Choose an environment to run your job:',
-              body: new SelectEnv(user_ID, gpu_time_limit, projectId, projectType, email_verified, false),
-              focusNodeSelector: 'input',
-              buttons: [Dialog.cancelButton(), Dialog.okButton({ accept: true, label: 'CREATE' })],
-            }).then(result => {
-              if (result.button.label === 'CANCEL') {
-                return;
-              }
-              if (!result.value) {
-                return null;
-              }
-              if (result.value[0] === 'notebook') {
-                const options = {
-                  name: `Run: ${result.value[1] ? result.value[1] : 'Python'}`,
-                  path: context.path,
-                  preferredLanguage: context.model.defaultKernelLanguage,
-                  kernelPreference: { name: 'python3' },
-                  insertMode: 'split-bottom',
-                };
+          commands.execute('docmanager:save', options).then((e) => {
+            console.log('保存成功')
+            const user_ID = localStorage.getItem('user_ID');
+            const hash = window.location.hash;
+            const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
+            let projectType = match[2];
+            let gpu_time_limit = 0;
+            let email_verified = false;
+            console.log('每次', openEvent)
+            eventNum = 0
+            window.removeEventListener("openConsole",openEvent,false)
+            openEvent = function (e) {
+              if(eventNum === 0){
+                const {options} = (<any>e).detail
+                console.log('options', options)
                 openConsole(options)
                   .then((consolePanel) => {
                     const { console: currentConsole } = consolePanel;
@@ -765,179 +740,56 @@ const extension: JupyterLabPlugin<void> = {
                       return;
                     }
                     let model = promptCell.model;
-                    model.value.text = `!python ${context.contentsModel.name} ${result.value[2]}`;
+                    model.value.text = `!python ${context.contentsModel.name} `;
                     currentConsole.execute(true);
+                    eventNum = eventNum +1
                   });
-                return;
-              }
-              const hash = window.location.hash;
-              const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
-              if (match) {
+              } else {
 
-                const projectId = match[1];
-                const type = match[2];
-                const scriptPath = context.path;
-                // const hide = message.loading((window as any).intl.formatMessage(
-                //   { id: 'notebook.job.creating' },
-                //   { defaultMessage: 'Job creating...' },
-                // ), 0);
-                console.log('你是不是走这里')
-                let event = new CustomEvent('jobTest', { detail: {
-                    projectId: projectId,
-                    type: type,
-                    scriptPath: scriptPath,
-                    env: result.value[0],
-                    displayName: result.value[1],
-                    args: result.value[2]
-                  } })
-                window.dispatchEvent(event)
-                return
-                // createJob({
-                //   projectId, type, scriptPath, env: result.value[0], displayName: result.value[1],
-                //   args: result.value[2], onJson: (res) => {
-                //     console.log('jobres', res);
-                //     if (res['is_error']) {
-                //       message.error(
-                //         (window as any).intl.formatMessage(
-                //           { id: 'notebook.job.createdError' },
-                //           { defaultMessage: 'Job error.' },
-                //         ),
-                //       );
-                //       app.shell.activateById('logs-manager');
-                //     } else {
-                //       message.success(
-                //         (window as any).intl.formatMessage(
-                //           { id: 'notebook.job.created' },
-                //           { defaultMessage: 'Job created.' },
-                //         ),
-                //       );
-                //       app.shell.activateById('jobs-manager');
-                //     }
-                //
-                //     hide();
-                //   },
-                // });
               }
-            });
+
+            }
+            window.addEventListener("openConsole",openEvent,false)
+
+            if (match) {
+              const projectId = match[1];
+              const type = match[2];
+              const scriptPath = context.path;
+              console.log('你是不是走这里')
+              let event = new CustomEvent('jobTest', { detail: {
+                  projectId: projectId,
+                  type: type,
+                  scriptPath: scriptPath,
+                  env: 'notebook',
+                  displayName: '',
+                  args: '',
+                  user_ID: user_ID,
+                  gpu_time_limit: gpu_time_limit,
+                  email_verified: email_verified,
+                  projectType: projectType,
+                  options: {
+                    name: `Run: Python`,
+                    path: context.path,
+                    preferredLanguage: context.model.defaultKernelLanguage,
+                    kernelPreference: { name: 'python3' },
+                    insertMode: 'split-bottom',
+                  }
+                } })
+              window.dispatchEvent(event)
+              console.log('我发完消息了')
+            }
+          }).catch((err) => {
+            console.log('保存失败')
           });
-          // console.log('gpu_time_limit111...', gpu_time_limit);
+
+
+
         },
         tooltip: 'Create Job',
       });
     }
 
-    // /**
-    //  * Create a toExecutable toolbar item.
-    //  */
-    // function createGpuRunButton(context: DocumentRegistry.CodeContext): ToolbarButton {
-    //   return new ToolbarButton({
-    //     className: TOOLBAR_GPU_RUN_CLASS,
-    //     onClick: () => {
-    //       const { commands } = app;
-    //       const options = {
-    //         path: context.path,
-    //         options: { mode: 'split-right' },
-    //       };
-    //       commands.execute('docmanager:save', options);
-    //       const user_ID = localStorage.getItem('user_ID');
-    //       const hash = window.location.hash;
-    //       const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
-    //       // console.log('user_ID...', user_ID);
-    //
-    //       let projectId = match[1];
-    //       let projectType = match[2];
-    //       let gpu_time_limit = 0;
-    //       let email_verified = false
-    //       // let queuingNumber = 0;
-    //       // let runningNumber = 0;
-    //
-    //       let a = getUserInfo({ user_ID })
-    //
-    //       // let b = getUserJobs({ projectId, projectType, status: 'Queuing' });
-    //       // get User queueing jobs
-    //       // let c = getUserJobs({ projectId, projectType, status: 'Running' });
-    //
-    //       Promise.all([a]).then(([res1]) => {
-    //         email_verified = res1.data.email_verified;
-    //         gpu_time_limit = res1.data.gpu_time_limit || 0;
-    //         // queuingNumber = res2.data.count;
-    //         // runningNumber = res3.data.count;
-    //         // console.log('gpu_time_limit...', gpu_time_limit);
-    //         showDialog({
-    //           title: 'Choose an environment to run your job:',
-    //           body: new SelectEnv(user_ID, gpu_time_limit, projectId, projectType,email_verified, true),
-    //           focusNodeSelector: 'input',
-    //           buttons: [Dialog.cancelButton(), Dialog.okButton({ accept: true, label: 'CREATE' })],
-    //         }).then(result => {
-    //           if (result.button.label === 'CANCEL') {
-    //             return;
-    //           }
-    //           if (!result.value) {
-    //             return null;
-    //           }
-    //           if (result.value[0] === 'notebook') {
-    //             const options = {
-    //               name: `Run: ${result.value[1] ? result.value[1] : 'Python'}`,
-    //               path: context.path,
-    //               preferredLanguage: context.model.defaultKernelLanguage,
-    //               kernelPreference: { name: 'python3' },
-    //               insertMode: 'split-bottom',
-    //             };
-    //             openConsole(options)
-    //               .then((consolePanel) => {
-    //                 const { console: currentConsole } = consolePanel;
-    //                 let promptCell = currentConsole.promptCell;
-    //                 if (!promptCell) {
-    //                   return;
-    //                 }
-    //                 let model = promptCell.model;
-    //                 model.value.text = `!python ${context.contentsModel.name}`;
-    //                 currentConsole.execute(true);
-    //               });
-    //             return;
-    //           }
-    //           const hash = window.location.hash;
-    //           const match = pathToRegexp('#/workspace/:projectId/:type').exec(hash);
-    //           if (match) {
-    //             const projectId = match[1];
-    //             const type = match[2];
-    //             const scriptPath = context.path;
-    //             const hide = message.loading((window as any).intl.formatMessage(
-    //               {id: 'notebook.job.creating'},
-    //               {defaultMessage: 'Job creating...'}
-    //             ), 0);
-    //             createJob({
-    //               projectId, type, scriptPath, env: result.value[0], displayName: result.value[1], onJson: (res) => {
-    //                 // console.log('jobres', res)
-    //                 if(res['is_error']){
-    //                   message.error(
-    //                     (window as any).intl.formatMessage(
-    //                       {id: 'notebook.job.createdError'},
-    //                       {defaultMessage: 'Job error.'}
-    //                     )
-    //                   );
-    //                   app.shell.activateById('logs-manager');
-    //                 } else {
-    //                   message.success(
-    //                     (window as any).intl.formatMessage(
-    //                       {id: 'notebook.job.created'},
-    //                       {defaultMessage: 'Job created.'}
-    //                     )
-    //                   );
-    //                   app.shell.activateById('jobs-manager');
-    //                 }
-    //
-    //                 hide();
-    //               },
-    //             });
-    //           }
-    //         });
-    //       });
-    //       // console.log('gpu_time_limit111...', gpu_time_limit);
-    //     },
-    //     tooltip: 'Create GPU Job',
-    //   });
-    // }
+
 
     /**
      * A document widget for editors.
