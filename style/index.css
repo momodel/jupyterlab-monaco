@@ -18,7 +18,19 @@
     background: var(--jp-toolbar-background);
     z-index: 1;
 }
+.jp-MonacoPanel-toolbar .jp-Toolbar-item{
+  cursor: pointer;
+  box-shadow: none!important;
 
+}
+.jp-MonacoPanel-toolbar .jp-Toolbar-item:hover {
+  box-shadow: none!important;
+  border: none!important;
+}
+.jp-MonacoPanel-toolbar .jp-Toolbar-item:focus {
+  box-shadow: none!important;
+  border: none!important;
+}
 .monaco-job-name-input {
     width: 250px;
 }
