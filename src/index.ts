@@ -895,8 +895,8 @@ const extension: JupyterLabPlugin<void> = {
       {
         factoryOptions: {
           name: 'Monaco Editor',
-          fileTypes: ['*'],
-          defaultFor: ['*'],
+          fileTypes: ['*', 'markdown'],
+          defaultFor: ['markdown'],
         },
       });
     app.docRegistry.addWidgetFactory(factory);
